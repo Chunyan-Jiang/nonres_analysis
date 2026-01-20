@@ -11,7 +11,7 @@ The repository is organized as follows:
 
 Code_and_Data/
     Dataset/
-        Data files or data descriptions used in the analyses.
+        Data files used in the analyses.
 
     Data Cleaning/
         R scripts for cleaning and preparing the raw data.
@@ -27,11 +27,6 @@ Code_and_Data/
         - LOCF (Last Observation Carried Forward)
         - Markov Chain (MC)
         - Random Forest (RF)
-        Each method folder contains a README file with method-specific
-        execution instructions.
-
-    Test Data/
-        Test data used for reproducibility and consistency checks.
 
 report.pdf
     Final project report.
