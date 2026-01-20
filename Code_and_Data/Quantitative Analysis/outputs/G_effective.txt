@@ -1,0 +1,2 @@
+[1] "Nominal G: 310"
+[1] "Effective G: 203.96"

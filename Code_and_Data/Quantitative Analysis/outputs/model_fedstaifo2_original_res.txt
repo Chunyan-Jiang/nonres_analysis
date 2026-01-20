@@ -1,0 +1,110 @@
+
+Family: binomial 
+Link function: logit 
+
+Formula:
+unit_nonres ~ fedstaifo + sector_total + month + s(calendar_time_shift, 
+    bs = "ps", k = 50) + s(particip_num, bs = "ps", k = 50) + 
+    s(particip_length, bs = "ps", k = 50) + s(vg_statebus_past6m, 
+    bs = "ps", k = 12) + s(vg_comexp_past6m, bs = "ps", k = 12)
+
+Parametric coefficients:
+                                                Estimate Std. Error z value
+(Intercept)                                     -2.93848    0.07539 -38.978
+fedstaifoSchleswig-Holstein                      0.12263    0.08750   1.402
+fedstaifoHamburg                                -0.46123    0.10979  -4.201
+fedstaifoBremen                                  0.24503    0.08637   2.837
+fedstaifoNiedersachsen                           0.01875    0.09321   0.201
+fedstaifoNordrhein-Westfalen                    -0.23238    0.08655  -2.685
+fedstaifoRheinland-Pfalz                         0.18183    0.07905   2.300
+fedstaifoHessen                                  0.04179    0.08806   0.475
+fedstaifoBaden-Wuerttemberg                      0.23222    0.08498   2.733
+fedstaifoBayern                                  0.30520    0.08951   3.410
+fedstaifoSaarland                               -0.05676    0.08040  -0.706
+fedstaifoMecklenburg-Vorpommern                 -0.14073    0.10320  -1.364
+fedstaifoBrandenburg                             0.13914    0.08221   1.692
+fedstaifoSachsen-Anhalt                         -0.34340    0.08894  -3.861
+fedstaifoSachsen                                 0.09944    0.09046   1.099
+fedstaifoThueringen                             -0.22448    0.08133  -2.760
+sector_totalTextile, Clothing, Leather          -0.54628    0.11330  -4.821
+sector_totalWood & Cork Products                -0.20466    0.08982  -2.279
+sector_totalPaper & Board Industry              -0.58231    0.11503  -5.062
+sector_totalPublishing & Printing                0.14374    0.07608   1.889
+sector_totalChemical Industry                   -0.34099    0.25556  -1.334
+sector_totalRubber & Plastics                    0.05896    0.08969   0.657
+sector_totalGlass, Ceramics & Stone Processing   0.32918    0.19543   1.684
+sector_totalMetal Industry                      -0.06416    0.08016  -0.800
+sector_totalElectronics & Optical Products      -0.15677    0.10989  -1.427
+sector_totalElectric Equipment                   0.15816    0.07650   2.067
+sector_totalMachinery Construction               0.03568    0.06810   0.524
+sector_totalVehicles & Parts                     0.15682    0.14353   1.093
+sector_totalFurniture, Jewellery, Toys & Others  0.22931    0.10442   2.196
+sector_totalOther Production                     0.29001    0.10049   2.886
+monthFeb                                        -0.06788    0.05863  -1.158
+monthMar                                        -0.01346    0.05816  -0.231
+monthApr                                        -0.09578    0.05905  -1.622
+monthMay                                         0.05747    0.05770   0.996
+monthJun                                         0.01426    0.05838   0.244
+monthJul                                        -0.15246    0.06047  -2.521
+monthAug                                         0.05602    0.05822   0.962
+monthSep                                         0.11749    0.05759   2.040
+monthOct                                         0.08503    0.05795   1.467
+monthNov                                         0.01711    0.05864   0.292
+monthDec                                         0.08077    0.05809   1.390
+                                                Pr(>|z|)    
+(Intercept)                                      < 2e-16 ***
+fedstaifoSchleswig-Holstein                     0.161046    
+fedstaifoHamburg                                2.66e-05 ***
+fedstaifoBremen                                 0.004553 ** 
+fedstaifoNiedersachsen                          0.840576    
+fedstaifoNordrhein-Westfalen                    0.007254 ** 
+fedstaifoRheinland-Pfalz                        0.021444 *  
+fedstaifoHessen                                 0.635100    
+fedstaifoBaden-Wuerttemberg                     0.006281 ** 
+fedstaifoBayern                                 0.000650 ***
+fedstaifoSaarland                               0.480213    
+fedstaifoMecklenburg-Vorpommern                 0.172706    
+fedstaifoBrandenburg                            0.090566 .  
+fedstaifoSachsen-Anhalt                         0.000113 ***
+fedstaifoSachsen                                0.271675    
+fedstaifoThueringen                             0.005779 ** 
+sector_totalTextile, Clothing, Leather          1.43e-06 ***
+sector_totalWood & Cork Products                0.022692 *  
+sector_totalPaper & Board Industry              4.14e-07 ***
+sector_totalPublishing & Printing               0.058839 .  
+sector_totalChemical Industry                   0.182105    
+sector_totalRubber & Plastics                   0.510935    
+sector_totalGlass, Ceramics & Stone Processing  0.092101 .  
+sector_totalMetal Industry                      0.423469    
+sector_totalElectronics & Optical Products      0.153688    
+sector_totalElectric Equipment                  0.038697 *  
+sector_totalMachinery Construction              0.600319    
+sector_totalVehicles & Parts                    0.274554    
+sector_totalFurniture, Jewellery, Toys & Others 0.028081 *  
+sector_totalOther Production                    0.003901 ** 
+monthFeb                                        0.246940    
+monthMar                                        0.817042    
+monthApr                                        0.104783    
+monthMay                                        0.319229    
+monthJun                                        0.807053    
+monthJul                                        0.011690 *  
+monthAug                                        0.335950    
+monthSep                                        0.041338 *  
+monthOct                                        0.142323    
+monthNov                                        0.770422    
+monthDec                                        0.164405    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                          edf Ref.df    Chi.sq  p-value    
+s(calendar_time_shift) 15.174     49     143.0  < 2e-16 ***
+s(particip_num)        21.929     49 3663111.0  < 2e-16 ***
+s(particip_length)     13.484     49 1012411.3  < 2e-16 ***
+s(vg_statebus_past6m)   5.764     11    6861.5  < 2e-16 ***
+s(vg_comexp_past6m)     4.073     11     289.6 0.000659 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =  0.139   Deviance explained = 19.2%
+fREML =  66573  Scale est. = 1         n = 48648

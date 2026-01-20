@@ -1,0 +1,575 @@
+---
+title: "Descriptive Analysis: Unit Nonresponse"
+date: "2025-12-10"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+# Load Packages
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(zoo)
+library(haven)
+library(purrr)
+```
+
+# Load Dataset
+```{r}
+unit_nonresponse_data <- read_dta("../Dataset/unit_nonresponse_data.dta")
+```
+
+# Preparation
+```{r}
+size_labels <- c(
+  "1" = "1-99",
+  "2" = "100-249",
+  "3" = "250-499",
+  "4" = "500-999",
+  "5" = ">1000",
+  "K" = "Small business",
+  "S" = "Solo self-employed"
+)
+
+sector_names <- tibble(
+  sector_total = c(6,7,8,9,10,11,12,13,14,15,16,17,18,19,22,23,24),
+  sector_name = c(
+    "Food, Drinks & Tobacco",
+    "Textile, Clothing, Leather",
+    "Wood & Cork Products",
+    "Paper & Board Industry",
+    "Publishing & Printing",
+    "Cokery & Oil Processing",
+    "Chemical Industry",
+    "Pharmaceutical Industry",
+    "Rubber & Plastics",
+    "Glass, Ceramics & Stone Processing",
+    "Metal Industry",
+    "Electronics & Optical Products",
+    "Electric Equipment",
+    "Machinery Construction",
+    "Vehicles & Parts",
+    "Furniture, Jewellery, Toys & Others",
+    "Other Production"
+  )
+)
+
+state_names <- tibble(
+  fedstaifo = 1:16,
+  state_name = c(
+    "Berlin West",
+    "Schleswig-Holstein",
+    "Hamburg",
+    "Bremen",
+    "Niedersachsen",
+    "Nordrhein-Westfalen",
+    "Rheinland-Pfalz",
+    "Hessen",
+    "Baden-Wuerttemberg",
+    "Bayern",
+    "Saarland",
+    "Mecklenburg-Vorpommern",
+    "Brandenburg",
+    "Sachsen-Anhalt",
+    "Sachsen",
+    "Thueringen"
+  )
+)
+
+unit_nonresponse_data_des <- unit_nonresponse_data %>%
+  mutate(
+
+    # outcome (binary, keep numeric 0/1 for binomial GAM)
+    unit_nonres = unit_nonres,
+
+    # cluster id (numeric, used for clustering only)
+    idnum = idnum,
+
+    # East / West
+    vg_westeast = factor(
+      vg_westeast,
+      levels = c(1, 2),
+      labels = c("Western", "Eastern")
+    ),
+
+    # firm size
+    vg_size = factor(
+      vg_size,
+      levels = names(size_labels),
+      labels = unname(size_labels)
+    ),
+
+    # online participation
+    online = factor(
+      online,
+      levels = c(0, 1),
+      labels = c("Non-online", "Online")
+    ),
+
+    # month (Jan–Dec)
+    month = factor(
+      month,
+      levels = 1:12,
+      labels = c(
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      )
+    )
+  )
+
+unit_nonresponse_data_des <- unit_nonresponse_data_des %>%
+  left_join(sector_names, by = "sector_total") %>%
+  mutate(
+    sector_total = factor(
+      sector_total,
+      levels = sector_names$sector_total,
+      labels = sector_names$sector_name
+    )
+  ) %>%
+  select(-sector_name)
+
+unit_nonresponse_data_des <- unit_nonresponse_data_des %>%
+  left_join(state_names, by = "fedstaifo") %>%
+  mutate(
+    fedstaifo = factor(
+      fedstaifo,
+      levels = state_names$fedstaifo,
+      labels = state_names$state_name
+    )
+  ) %>%
+  select(-state_name)
+
+```
+
+# Unit Nonresonse Rate by Time
+```{r}
+daily_rate <- unit_nonresponse_data_des %>%
+  group_by(shift_date) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres), .groups = 'drop')
+
+p_des <- ggplot(daily_rate, aes(x = shift_date, y = unit_nonres_rate)) +
+  geom_line() +
+  scale_x_date(date_breaks = "3 years", date_labels = "%Y") +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = "Time", y = "Unit Nonresponse rate") +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Time.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Month
+```{r}
+monthly_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(month)) %>% 
+  group_by(month) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres == 1), .groups = 'drop')
+
+p_des <- ggplot(monthly_rate, aes(x = month, y = unit_nonres_rate)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +  
+  labs(x = "Month", y = "Unit nonresponse rate") +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Month.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Region
+```{r}
+region_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(vg_westeast)) %>%
+  group_by(vg_westeast) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres), .groups = 'drop')
+
+p_des <- ggplot(region_rate, aes(x = vg_westeast, y = unit_nonres_rate)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +  
+  labs(x = "Region", y = "Unit nonresponse rate") +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Region.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Sector
+```{r}
+sector_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(sector_total)) %>%
+  group_by(sector_total) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres), .groups = "drop")
+
+p_des <- ggplot(sector_rate, aes(x = reorder(sector_total, unit_nonres_rate),
+                             y = unit_nonres_rate)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(x = "Sector", y = "Unit nonresponse rate") +
+  coord_flip() +
+  theme_minimal(base_size = 12)
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Sector.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Particip number (optional)
+```{r}
+particip_rate <- unit_nonresponse_data_des %>%
+  group_by(particip_num) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres), .groups = "drop") %>%
+  filter(!is.na(particip_num))
+  
+p_des <- ggplot(particip_rate, aes(x = particip_num, y = unit_nonres_rate)) +
+  geom_line()+
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = "Participation Number", y = "Unit Nonresponse rate") +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Particip.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Particip number + Variability Bands
+```{r}
+particip_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(particip_num)) %>%
+  group_by(particip_num) %>%
+  summarise(
+    n = n(),
+    unit_nonres_rate = mean(unit_nonres),
+    se = sqrt(unit_nonres_rate * (1 - unit_nonres_rate) / n),
+    lower = unit_nonres_rate - 1.96 * se,
+    upper = unit_nonres_rate + 1.96 * se,
+    .groups = "drop"
+  )
+
+p_des <- ggplot(particip_rate,
+                aes(x = particip_num, y = unit_nonres_rate)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.25) +
+  geom_line() +
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(
+    x = "Participation Number",
+    y = "Unit nonresponse rate"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Particip_vb.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Particip number Count
+```{r}
+particip_count <- unit_nonresponse_data_des %>%
+  count(particip_num)
+
+p_des <- ggplot(particip_count, aes(x = particip_num, y = n)) +
+  geom_line() +
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  labs(
+    x = "Participation Number",
+    y = "Number of observations"
+  ) +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Particip_count.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+write.csv(particip_count, file = 'outputs/particip_count.csv', row.names = FALSE)
+```
+
+# Unit Nonresonse Rate by Particip length (optional)
+```{r}
+particip_length_rate <- unit_nonresponse_data_des %>%
+  group_by(particip_length) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres))
+  
+
+p_des <- ggplot(particip_length_rate, aes(x = particip_length, y = unit_nonres_rate)) +
+  geom_line()+
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = "Participation Length", y = "Unit nonresponse rate") +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_particip_length.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Particip length + Variability Bands
+```{r}
+particip_length_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(particip_length)) %>%
+  group_by(particip_length) %>%
+  summarise(
+    n = n(),
+    unit_nonres_rate = mean(unit_nonres),
+    se = sqrt(unit_nonres_rate * (1 - unit_nonres_rate) / n),
+    lower = unit_nonres_rate - 1.96 * se,
+    upper = unit_nonres_rate + 1.96 * se,
+    .groups = "drop"
+  )
+
+p_des <- ggplot(particip_length_rate,
+                aes(x = particip_length, y = unit_nonres_rate)) +
+  geom_ribbon(aes(ymin = lower, ymax = upper), alpha = 0.25) +
+  geom_line() +
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(
+    x = "Participation Length",
+    y = "Unit nonresponse rate"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_particip_length_vb.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Particip Length Count
+```{r}
+particip_length_count <- unit_nonresponse_data_des %>%
+  count(particip_length)
+
+p_des <- ggplot(particip_length_count, aes(x = particip_length, y = n)) +
+  geom_line() +
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  labs(
+    x = "Participation Length",
+    y = "Number of observations"
+  ) +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Particip_length_count.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+write.csv(particip_length_count, file = 'outputs/particip_length_count.csv', row.names = FALSE)
+```
+
+# local cor(number, length)
+
+```{r}
+k <- 15
+
+local_corr <- map_dfr(1:400, function(L) {
+  
+  sub <- unit_nonresponse_data_des %>%
+    filter(
+      particip_length >= L - k,
+      particip_length <= L + k
+    )
+  
+  if (nrow(sub) < 30) return(NULL)  
+  
+  tibble(
+    length_center = L,
+    pearson_cor = cor(sub$particip_length, sub$particip_num),
+    spearman_cor = cor(sub$particip_length, sub$particip_num, method = "spearman"),
+    n_obs = nrow(sub)
+  )
+})
+
+
+p_des <- ggplot(local_corr, aes(x = length_center, y = pearson_cor)) +
+  geom_line(alpha = 0.8) +
+  geom_smooth(se = FALSE, method = "loess", color = "black") +
+  scale_y_continuous(limits = c(0, 1)) +
+  scale_x_continuous(limits = c(1, NA), 
+                     breaks = function(x) {
+                       unique(c(1, scales::pretty_breaks()(x)))},
+                     expand = expansion(mult = c(0, 0.02))) +
+  labs(
+    x = "Participation Length",
+    y = "Local correlation between Length and Number"
+  ) +
+  theme_minimal(base_size = 12)
+
+p_des
+
+ggsave("outputs/Local_correlation_particip.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by avg BS (UNROUNDED)
+```{r}
+avg_BS_unround_rate <- unit_nonresponse_data_des %>%
+  group_by(vg_statebus_past6m) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres)) %>%
+  filter(!is.na(vg_statebus_past6m))
+  
+
+p_des <- ggplot(avg_BS_unround_rate, aes(x = vg_statebus_past6m, y = unit_nonres_rate)) +
+  geom_line()+
+  geom_point(size = 2) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = "Average BS over Past Six Months", y = "Unit Nonresponse rate") +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_AVG_BS.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# avg BS count
+```{r}
+avg_bs_count <- unit_nonresponse_data_des %>%
+  count(vg_statebus_past6m)
+
+p_des <- ggplot(avg_bs_count, aes(x = vg_statebus_past6m, y = n)) +
+  geom_col() +
+  scale_y_continuous(
+    breaks = scales::pretty_breaks(n = 20),
+    labels = scales::comma) +
+  labs(
+    x = "Average BS over Past Six Months",
+    y = "Number of observations"
+  ) +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/avg_bs_count.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+write.csv(avg_bs_count, file = 'outputs/avg_bs_count.csv', row.names = FALSE)
+```
+
+# Unit Nonresonse Rate by avg BE (UNROUNDED)
+```{r}
+avg_BE_unround_rate <- unit_nonresponse_data_des %>%
+  group_by(vg_comexp_past6m) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres)) %>%
+  filter(!is.na(vg_comexp_past6m))
+  
+
+p_des <- ggplot(avg_BE_unround_rate, aes(x = vg_comexp_past6m, y = unit_nonres_rate)) +
+  geom_line()+
+  geom_point(size = 2) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +
+  labs(x = "Average BE over Past Six Months", y = "Unit Nonresponse rate") +
+  theme_minimal() +
+  theme(plot.title = element_blank())
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_AVG_BE.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# avg BE count
+```{r}
+avg_be_count <- unit_nonresponse_data_des %>%
+  count(vg_comexp_past6m)
+
+p_des <- ggplot(avg_be_count, aes(x = vg_comexp_past6m, y = n)) +
+  geom_col() +
+  scale_y_continuous(
+    breaks = scales::pretty_breaks(n = 20),
+    labels = scales::comma) +
+  labs(
+    x = "Average BE over Past Six Months",
+    y = "Number of observations"
+  ) +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/avg_be_count.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+write.csv(avg_be_count, file = 'outputs/avg_be_count.csv', row.names = FALSE)
+```
+
+# Unit Nonresonse Rate by Size
+```{r}
+size_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(vg_size)) %>% 
+  group_by(vg_size) %>%
+  summarise(missing_rate = mean(unit_nonres == 1), .groups = 'drop')  
+
+p_des <- ggplot(size_rate, aes(x = vg_size, y = missing_rate)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +  
+  labs(x = "Company Size", y = "Unit nonresponse rate") +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Company_Size.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by Online Status
+```{r}
+online_rate <- unit_nonresponse_data_des %>%
+  group_by(online) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres), .groups = 'drop')
+
+p_des <- ggplot(online_rate, aes(x = online, y = unit_nonres_rate)) +
+  geom_col(fill = "steelblue") +
+  geom_text(aes(label = percent(unit_nonres_rate, accuracy = 0.001)),
+            vjust = -0.5, size = 3) +
+  scale_y_continuous(labels = percent_format(accuracy = 0.1)) +  
+  labs(x = "Online Status", y = "Unit nonresponse rate") +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_Online.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Unit Nonresonse Rate by festatifo
+```{r}
+fedstaifo_rate <- unit_nonresponse_data_des %>%
+  filter(!is.na(fedstaifo)) %>%
+  group_by(fedstaifo) %>%
+  summarise(unit_nonres_rate = mean(unit_nonres), .groups = 'drop')
+  #filter(!fedstaifo=='')
+
+p_des <- ggplot(fedstaifo_rate, aes(x = reorder(fedstaifo, unit_nonres_rate),
+                             y = unit_nonres_rate)) +
+  geom_col(fill = "steelblue") +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(x = "State", y = "Unit nonresponse rate") +
+  coord_flip() +
+  theme_minimal(base_size = 12)
+
+p_des
+
+ggsave("outputs/Unit_Nonresponse_Rate_by_State.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```

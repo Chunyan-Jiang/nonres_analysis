@@ -1,0 +1,332 @@
+# -------------------------------------------------------------------
+# Purpose:
+#   Homogeneous Markov Chain (MC) imputation for BE + simulation-based evaluation.
+#
+# Workflow:
+#   1) Load and prepare data (generate lag variables for MC conditioning)
+#   2) Load helper functions (masking, MC imputation, evaluation)
+#   3) Run simulations for block_length = 1..6 (n_sim = 30, fixed seed) for different Markov orders (MC2–MC4; optional)
+#   4) Save results (RData + CSV summaries)
+#
+# Key settings (used below):
+#   - sampling_rate = 0.1
+#   - block_length  = 1..6
+#   - n_sim         = 30
+#   - seed          = 123 (seed + s per simulation run)
+#   - MC scenarios correspond to Markov order h:
+#       MC1: h = 1 (default)
+#       MC2: h = 2 (optional)
+#       MC3: h = 3 (optional)
+#       MC4: h = 4 (optional)
+#
+# Outputs:
+#   outputs/MC results/ (RData checkpoints + final RData + CSV summaries)
+# -------------------------------------------------------------------
+
+
+# Set the working directory to the current file's location.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+# Load Packages:
+# - Data wrangling: dplyr, tidyr, purrr, rlang
+# - I/O: haven
+# - Imputation helpers: zoo
+# - Evaluation metrics: psych, Metrics
+# - Plotting: ggplot2
+```{r}
+library(haven)
+library(tidyr)
+library(purrr)
+library(Metrics)
+library(zoo)
+library(rlang)
+library(psych)
+library(dplyr)
+library(ggplot2)
+```
+
+# Load Dataset
+# We use the prepared panel dataset for imputation evaluation.
+# Note: simulation repeats n_sim times; runtime can be substantial on the full sample of read data
+```{r}
+filled.data <- read_dta("../../Dataset/imputation_data.dta")
+```
+
+# Generate lagged versions of BS and BE each firm (idnum).
+# These lags are used to form lag-pattern conditions for the Markov Chain imputation.
+```{r}
+filled.data <- filled.data%>%
+  arrange(idnum, shift_date) %>%         
+  group_by(idnum) %>%              
+  mutate(
+    vg_statebus_lag1 = lag(vg_statebus, 1),    
+    vg_statebus_lag2 = lag(vg_statebus, 2),    
+    vg_statebus_lag3 = lag(vg_statebus, 3),
+    vg_statebus_lag4 = lag(vg_statebus, 4),    
+    vg_comexp_lag1 = lag(vg_comexp, 1),    
+    vg_comexp_lag2 = lag(vg_comexp, 2),    
+    vg_comexp_lag3 = lag(vg_comexp, 3),    
+    vg_comexp_lag4 = lag(vg_comexp, 4)
+  ) %>%
+  ungroup()
+```
+
+# Load helpers
+```{r}
+source("../helpers/MC_helpers.R")
+```
+
+# Simulation
+# -------------------------------------------------------------------
+# Simulation runs for different missing block lengths.
+# We keep sampling_rate = 0.1 and n_sim = 30 fixed, and vary block_length = 1..6.
+# Results are stored as a list with:
+#   - $all_runs: metrics per simulation run
+#   - $summary: average metrics across runs
+# -------------------------------------------------------------------
+
+## MC1
+```{r}
+# Defined Constants
+N_SIM <- 30
+SEED  <- 123
+SAMPLING_RATE <- 0.1
+BLOCK_LENGTHS <- 1:6
+
+for (k in BLOCK_LENGTHS) {
+  message(paste("\n>>> Starting Scenario: Block Length =", k, "<<<"))
+  
+  # 1. Run the simulation
+  current_result <- simulate_imputation_evaluation(
+    df = filled.data,             
+    var = "vg_comexp",              
+    id = "idnum",
+    time = "shift_date",
+    mask_fun = simulate_mask_row,
+    # Dynamic block_length for masking
+    mask_args = list(block_length = k, sampling_rate = SAMPLING_RATE),
+    impute_fun = impute_masked_mc,    
+    impute_args = list(
+      mask_flag = "is_masked",
+      h = 1,
+      lag_list = c('vg_comexp_lag1',
+                   'vg_comexp_lag2',
+                   'vg_comexp_lag3',
+                   'vg_comexp_lag4'),
+      strategy = 'mode'
+    ),
+    n_sim = N_SIM,
+    seed = SEED
+  )
+  
+  # 2. Assign the result to a specific variable name
+  assign(paste0("sim_mc1_result_", k), current_result)
+  
+  # Intermediate save
+  if(!dir.exists("outputs/MC results")) dir.create("outputs/MC results", recursive = TRUE)
+  save(list = ls(pattern = "^sim_mc1_result_"), file = 'outputs/MC results/MC_BE_res1_temp.RData')
+}
+```
+## MC2(optional)
+```{r}
+
+for (k in BLOCK_LENGTHS) {
+  message(paste("\n>>> Starting Scenario: Block Length =", k, "<<<"))
+  
+  # 1. Run the simulation
+  current_result <- simulate_imputation_evaluation(
+    df = filled.data,             
+    var = "vg_comexp",              
+    id = "idnum",
+    time = "shift_date",
+    mask_fun = simulate_mask_row,
+    # Dynamic block_length for masking
+    mask_args = list(block_length = k, sampling_rate = SAMPLING_RATE),
+    impute_fun = impute_masked_mc,    
+    impute_args = list(
+      mask_flag = "is_masked",
+      h = 2,
+      lag_list = c('vg_comexp_lag1',
+                   'vg_comexp_lag2',
+                   'vg_comexp_lag3',
+                   'vg_comexp_lag4'),
+      strategy = 'mode'
+    ),
+    n_sim = N_SIM,
+    seed = SEED
+  )
+  
+  # 2. Assign the result to a specific variable name
+  assign(paste0("sim_mc2_result_", k), current_result)
+  
+  # Intermediate save
+  if(!dir.exists("outputs/MC results")) dir.create("outputs/MC results", recursive = TRUE)
+  save(list = ls(pattern = "^sim_mc2_result_"), file = 'outputs/MC results/MC_BE_res2_temp.RData')
+}
+```
+
+# MC3(optional)
+```{r}
+for (k in BLOCK_LENGTHS) {
+  message(paste("\n>>> Starting Scenario: Block Length =", k, "<<<"))
+  
+  # 1. Run the simulation
+  current_result <- simulate_imputation_evaluation(
+    df = filled.data,             
+    var = "vg_comexp",              
+    id = "idnum",
+    time = "shift_date",
+    mask_fun = simulate_mask_row,
+    # Dynamic block_length for masking
+    mask_args = list(block_length = k, sampling_rate = SAMPLING_RATE),
+    impute_fun = impute_masked_mc,    
+    impute_args = list(
+      mask_flag = "is_masked",
+      h = 3,
+      lag_list = c('vg_comexp_lag1',
+                   'vg_comexp_lag2',
+                   'vg_comexp_lag3',
+                   'vg_comexp_lag4'),
+      strategy = 'mode'
+    ),
+    n_sim = N_SIM,
+    seed = SEED
+  )
+  
+  # 2. Assign the result to a specific variable name
+  assign(paste0("sim_mc3_result_", k), current_result)
+  
+  # Intermediate save
+  if(!dir.exists("outputs/MC results")) dir.create("outputs/MC results", recursive = TRUE)
+  save(list = ls(pattern = "^sim_mc3_result_"), file = 'outputs/MC results/MC_BE_res3_temp.RData')
+}
+```
+
+
+# MC4(optional)
+```{r}
+
+for (k in BLOCK_LENGTHS) {
+  message(paste("\n>>> Starting Scenario: Block Length =", k, "<<<"))
+  
+  # 1. Run the simulation
+  current_result <- simulate_imputation_evaluation(
+    df = filled.data,             
+    var = "vg_comexp",              
+    id = "idnum",
+    time = "shift_date",
+    mask_fun = simulate_mask_row,
+    # Dynamic block_length for masking
+    mask_args = list(block_length = k, sampling_rate = SAMPLING_RATE),
+    impute_fun = impute_masked_mc,    
+    impute_args = list(
+      mask_flag = "is_masked",
+      h = 4,
+      lag_list = c('vg_comexp_lag1',
+                   'vg_comexp_lag2',
+                   'vg_comexp_lag3',
+                   'vg_comexp_lag4'),
+      strategy = 'mode'
+    ),
+    n_sim = N_SIM,
+    seed = SEED
+  )
+  
+  # 2. Assign the result to a specific variable name
+  assign(paste0("sim_mc4_result_", k), current_result)
+  
+  # Intermediate save
+  if(!dir.exists("outputs/MC results")) dir.create("outputs/MC results", recursive = TRUE)
+  save(list = ls(pattern = "^sim_mc4_result_"), file = 'outputs/MC results/MC_BE_res4_temp.RData')
+}
+```
+
+# Save Results
+```{r}
+
+if(!dir.exists("outputs/MC results")) dir.create("outputs/MC results", recursive = TRUE)
+
+result_objects <- ls(pattern = "^sim_mc")
+
+manual_objects <- c(
+  "filled.data",                    
+  "impute_masked_mc",                
+  "simulate_mask_row",               
+  "simulate_imputation_evaluation",  
+  "N_SIM", "SEED", "SAMPLING_RATE", "BLOCK_LENGTHS" 
+)
+objects_to_save <- c(result_objects, manual_objects)
+save(list = objects_to_save, file = 'outputs/MC results/MC_BE_res.RData')
+```
+
+
+# Output files:
+# - mc1_all_runs_result_k.csv: per-simulation metrics (one row per run)
+# - mc1_summary_k.csv: averaged metrics across n_sim runs
+# where k corresponds to missing block length (block_length = 1..6).
+#
+# For MC2/MC3/MC4 , their outputs follow the same naming convention:
+# - mc2_all_runs_result_k.csv / mc2_summary_k.csv, etc.
+```{r}
+if(!dir.exists("outputs/MC results")) dir.create("outputs/MC results", recursive = TRUE)
+
+
+# Save MC1 Results
+
+for (k in 1:6) {
+  var_name <- paste0("sim_mc1_result_", k)
+  res <- get(var_name)
+  file_all <- paste0("outputs/MC results/mc1_all_runs_result_", k, ".csv")
+  file_sum <- paste0("outputs/MC results/mc1_summary_", k, ".csv")
+  write.csv(res$all_runs, file_all, row.names = TRUE)
+  write.csv(res$summary,  file_sum, row.names = TRUE)
+  message("Saved MC1: ", file_sum)
+}
+
+
+# Save MC2 Results (Loop)
+# for (k in 1:6) {
+#   var_name <- paste0("sim_mc2_result_", k)
+#   res <- get(var_name)
+#   file_all <- paste0("outputs/MC results/mc2_all_runs_result_", k, ".csv")
+#   file_sum <- paste0("outputs/MC results/mc2_summary_", k, ".csv")
+#   write.csv(res$all_runs, file_all, row.names = TRUE)
+#   write.csv(res$summary,  file_sum, row.names = TRUE)
+#   message("Saved MC2: ", file_sum)
+# }
+
+
+# Save MC3 Results
+
+# for (k in 1:6) {
+#   var_name <- paste0("sim_mc3_result_", k)
+#   res <- get(var_name)
+#   file_all <- paste0("outputs/MC results/mc3_all_runs_result_", k, ".csv")
+#   file_sum <- paste0("outputs/MC results/mc3_summary_", k, ".csv")
+#   write.csv(res$all_runs, file_all, row.names = TRUE)
+#   write.csv(res$summary,  file_sum, row.names = TRUE)
+#   message("Saved MC3: ", file_sum)
+# }
+
+
+# Save MC4 Results (Loop) - Commented Out
+
+# for (k in 1:6) {
+#   var_name <- paste0("sim_mc4_result_", k)
+#   res <- get(var_name)
+#   file_all <- paste0("outputs/MC results/mc4_all_runs_result_", k, ".csv")
+#   file_sum <- paste0("outputs/MC results/mc4_summary_", k, ".csv")
+#   write.csv(res$all_runs, file_all, row.names = TRUE)
+#   write.csv(res$summary,  file_sum, row.names = TRUE)
+#   message("Saved MC4: ", file_sum)
+# }
+```

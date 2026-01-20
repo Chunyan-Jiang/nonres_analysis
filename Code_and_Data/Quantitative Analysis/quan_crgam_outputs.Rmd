@@ -1,0 +1,1014 @@
+---
+title: "Quantitive Analysis: Cluster Robust GAM Results (Outputs)"
+output: pdf_document
+date: "2026-01-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE
+)
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+
+# Load helper functions
+source("helpers/quan_gam_diagnostics.R")
+source("helpers/quan_gam_plot.R")
+```
+
+```{r}
+library(mgcv)
+library(gratia)
+library(dplyr)
+library(ggplot2)
+library(sandwich)
+library(lmtest)
+```
+
+# Load Rdata
+```{r}
+load('outputs/quan_crgam.RData')
+```
+
+
+# model_fedstaifo1
+## save summary, gam.check, concurvity, cluster-robust covariance matrix, cluster-robust coefficient tests
+```{r}
+save_gam_full_diagnostics(
+  model       = model_fedstaifo1,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+## Input results of vcovCL
+```{r}
+model_fedstaifo1_cl <- readRDS("outputs/model_fedstaifo1_vcovCL.rds")
+```
+
+## Forestplot for State, Sector, Month
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_fedstaifo1,
+  V         = model_fedstaifo1_cl,
+  file_name = "outputs/model_fedstaifo1_forest_OR.pdf",
+  keep_regex = "^(fedstaifo|sector_total|month)",
+)
+```
+
+## Spline for calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_fedstaifo1_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_fedstaifo1_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## Spline for avg BS
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_fedstaifo1_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo1_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## Spline for avg BE
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_fedstaifo1_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo1_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Number
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_fedstaifo1_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_fedstaifo1_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_fedstaifo1_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_fedstaifo1_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_fedstaifo2
+## save summary, gam.check, concurvity, cluster-robust covariance matrix, cluster-robust coefficient tests
+```{r}
+save_gam_full_diagnostics(
+  model       = model_fedstaifo2,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+## Input results of vcovCL
+```{r}
+model_fedstaifo2_cl <- readRDS("outputs/model_fedstaifo2_vcovCL.rds")
+```
+
+## Forestplot for State, Sector, Month
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_fedstaifo2,
+  V         = model_fedstaifo2_cl,
+  file_name = "outputs/model_fedstaifo2_forest_OR.pdf",
+  keep_regex = "^(fedstaifo|sector_total|month)",
+)
+```
+
+## Spline for calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_fedstaifo2_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_fedstaifo2_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## Spline for Average BS
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_fedstaifo2_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo2_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## Spline for Average BE
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_fedstaifo2_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo2_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Number
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_fedstaifo2_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_fedstaifo2_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_fedstaifo2_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_fedstaifo2_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_fedstaifo3
+## save summary, gam.check, concurvity, cluster-robust covariance matrix, cluster-robust coefficient tests
+```{r}
+save_gam_full_diagnostics(
+  model       = model_fedstaifo3,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+## Input results of vcovCL
+```{r}
+model_fedstaifo3_cl <- readRDS("outputs/model_fedstaifo3_vcovCL.rds")
+```
+
+## Forestplot for State, Sector, Month
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_fedstaifo3,
+  V         = model_fedstaifo3_cl,
+  file_name = "outputs/model_fedstaifo3_forest_OR.pdf",
+  keep_regex = "^(fedstaifo|sector_total|month)",
+)
+```
+
+## Spline for calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_fedstaifo3_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_fedstaifo3_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## Spline for avg BS
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_fedstaifo3_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo3_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## Spline for avg BE
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_fedstaifo3_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo3_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Number
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_fedstaifo3_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_fedstaifo3_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_fedstaifo3_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_fedstaifo3_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# AIC
+```{r}
+aic_models <- AIC(
+  model_fedstaifo1,
+  model_fedstaifo2,
+  model_fedstaifo3
+)
+
+aic_models
+```
+
+Followiong Model with Eastwest is optional(not in paper)
+# model_westeast1
+
+## save summary, gam.check, concurvity, cluster-robust covariance matrix, cluster-robust coefficient tests
+```{r}
+save_gam_full_diagnostics(
+  model       = model_westeast1,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+```{r}
+model_westeast1_cl <- readRDS("outputs/model_westeast1_vcovCL.rds")
+```
+
+## Forestplot for Region(West/East), Sector, Month
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_westeast1,
+  V         = model_westeast1_cl,
+  file_name = "outputs/model_westeast1_forest_OR.pdf",
+  keep_regex = "^(vg_westeast|sector_total|month)",
+)
+```
+
+## Spline for calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_westeast1,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_westeast1_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_westeast1_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## Spline for avg BS over past 6 months
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast1,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_westeast1_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_westeast1_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## Spline for avg BE over past 6 months
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast1,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_westeast1_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_westeast1_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Number
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast1,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_westeast1_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_westeast1_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## Spline for Participation Length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast1,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_westeast1_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_westeast1_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_westeast2
+
+```{r}
+save_gam_full_diagnostics(
+  model       = model_westeast2,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+```{r}
+model_westeast2_cl <- readRDS("outputs/model_westeast2_vcovCL.rds")
+```
+
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_westeast2,
+  V         = model_westeast2_cl,
+  file_name = "outputs/model_westeast2_forest_OR.pdf",
+  keep_regex = "^(vg_westeast|sector_total|month)",
+)
+```
+
+## calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_westeast2,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_westeast2_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_westeast2_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## vg_statebus_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast2,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_westeast2_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_westeast2_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## vg_comexp_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast2,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_westeast2_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_westeast2_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## particip_num
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast2,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_westeast2_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_westeast2_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## particip_length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast2,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_westeast2_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_westeast2_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_westeast3
+```{r}
+save_gam_full_diagnostics(
+  model       = model_westeast3,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+```{r}
+model_westeast3_cl <- readRDS("outputs/model_westeast3_vcovCL.rds")
+```
+
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_westeast3,
+  V         = model_westeast3_cl,
+  file_name = "outputs/model_westeast3_forest_OR.pdf",
+  keep_regex = "^(vg_westeast|sector_total|month)",
+)
+```
+
+## calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_westeast3,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_westeast3_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_westeast3_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## vg_statebus_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast3,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_westeast3_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_westeast3_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## vg_comexp_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast3,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_westeast3_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_westeast3_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## particip_num
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast3,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_westeast3_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_westeast3_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## particip_length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_westeast3,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_westeast3_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_westeast3_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_fedstaifo1
+
+```{r}
+save_gam_full_diagnostics(
+  model       = model_fedstaifo1,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+```{r}
+model_fedstaifo1_cl <- readRDS("outputs/model_fedstaifo1_vcovCL.rds")
+```
+
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_fedstaifo1,
+  V         = model_fedstaifo1_cl,
+  file_name = "outputs/model_fedstaifo1_forest_OR.pdf",
+  keep_regex = "^(fedstaifo|sector_total|month)",
+)
+```
+
+## calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_fedstaifo1_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_fedstaifo1_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## vg_statebus_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_fedstaifo1_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo1_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## vg_comexp_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_fedstaifo1_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo1_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## particip_num
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_fedstaifo1_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_fedstaifo1_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## particip_length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo1,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_fedstaifo1_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_fedstaifo1_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_fedstaifo2
+
+```{r}
+save_gam_full_diagnostics(
+  model       = model_fedstaifo2,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+```{r}
+model_fedstaifo2_cl <- readRDS("outputs/model_fedstaifo2_vcovCL.rds")
+```
+
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_fedstaifo2,
+  V         = model_fedstaifo2_cl,
+  file_name = "outputs/model_fedstaifo2_forest_OR.pdf",
+  keep_regex = "^(fedstaifo|sector_total|month)",
+)
+```
+
+## calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_fedstaifo2_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_fedstaifo2_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## vg_statebus_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_fedstaifo2_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo2_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## vg_comexp_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_fedstaifo2_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo2_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## particip_num
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_fedstaifo2_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_fedstaifo2_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## particip_length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo2,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_fedstaifo2_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_fedstaifo2_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# model_fedstaifo3
+
+```{r}
+save_gam_full_diagnostics(
+  model       = model_fedstaifo3,
+  data        = df,
+  cluster_var = "idnum",
+  outdir      = "outputs"
+)
+```
+
+```{r}
+model_fedstaifo3_cl <- readRDS("outputs/model_fedstaifo3_vcovCL.rds")
+```
+
+```{r}
+forestplot_parametric_clusterCI(
+  model     = model_fedstaifo3,
+  V         = model_fedstaifo3_cl,
+  file_name = "outputs/model_fedstaifo3_forest_OR.pdf",
+  keep_regex = "^(fedstaifo|sector_total|month)",
+)
+```
+
+## calendar time
+```{r}
+time_map <- unit_nonresponse_data_factor %>%
+  select(calendar_time_shift, shift_date) %>%
+  distinct()
+
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "calendar_time_shift",
+  smooth_label = "s(calendar_time_shift)",
+  V = model_fedstaifo3_cl,
+  x_label = "Calendar Time",
+  y_label = "s(Calendar Time)",
+  file_name = "outputs/model_fedstaifo3_smooth_calendar_time_shift_clusterCI.pdf",
+  is_time = TRUE,
+  time_map = time_map,
+  date_var = "shift_date"
+)
+
+```
+
+## vg_statebus_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "vg_statebus_past6m",
+  smooth_label = "s(vg_statebus_past6m)",
+  V = model_fedstaifo3_cl,
+  x_label = "Average BS over Past 6 Months",
+  y_label = "s(Average BS over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo3_smooth_vg_statebus_past6m_clusterCI.pdf"
+)
+```
+
+## vg_comexp_past6m
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "vg_comexp_past6m",
+  smooth_label = "s(vg_comexp_past6m)",
+  V = model_fedstaifo3_cl,
+  x_label = "Average BE over Past 6 Months",
+  y_label = "s(Average BE over Past 6 Months)",
+  file_name = "outputs/model_fedstaifo3_smooth_vg_comexp_past6m_clusterCI.pdf"
+)
+
+```
+
+## particip_num
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "particip_num",
+  smooth_label = "s(particip_num)",
+  V = model_fedstaifo3_cl,
+  x_label = "Participation Number",
+  y_label = "s(Participation Number)",
+  file_name = "outputs/model_fedstaifo3_smooth_particip_num_clusterCI.pdf"
+)
+
+```
+
+## particip_length
+```{r}
+plot_smooth_clusterCI(
+  model  = model_fedstaifo3,
+  data   = df,
+  var    = "particip_length",
+  smooth_label = "s(particip_length)",
+  V = model_fedstaifo3_cl,
+  x_label = "Participation Length",
+  y_label = "s(Participation Length)",
+  file_name = "outputs/model_fedstaifo3_smooth_particip_length_clusterCI.pdf"
+)
+
+```
+
+# AIC
+```{r}
+aic_models <- AIC(
+  model_westeast1,
+  model_westeast2,
+  model_westeast3
+)
+
+aic_models
+```
+

@@ -1,0 +1,19 @@
+
+Method: fREML   Optimizer: perf newton
+full convergence after 16 iterations.
+Gradient range [-3.984457e-05,1.817606e-05]
+(score 66572.54 & scale 1).
+Hessian positive definite, eigenvalue range [3.984126e-05,5.682311].
+Model rank =  210 / 210 
+
+Basis dimension (k) checking results. Low p-value (k-index<1) may
+indicate that k is too low, especially if edf is close to k'.
+
+                          k'   edf k-index p-value  
+s(calendar_time_shift) 49.00 15.17    0.92   0.285  
+s(particip_num)        49.00 21.93    0.95   0.850  
+s(particip_length)     49.00 13.48    0.91   0.105  
+s(vg_statebus_past6m)  11.00  5.76    0.93   0.405  
+s(vg_comexp_past6m)    11.00  4.07    0.91   0.085 .
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1

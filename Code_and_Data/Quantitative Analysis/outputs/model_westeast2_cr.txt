@@ -1,0 +1,400 @@
+
+z test of coefficients:
+
+                                                   Estimate  Std. Error
+(Intercept)                                      -2.9192751   0.0468535
+vg_westeastEastern                               -0.1544734   0.0375211
+sector_totalTextile, Clothing, Leather           -0.5578889   0.0711747
+sector_totalWood & Cork Products                 -0.2271820   0.1085397
+sector_totalPaper & Board Industry               -0.5286150   0.0601846
+sector_totalPublishing & Printing                 0.2257532   0.0695842
+sector_totalChemical Industry                    -0.3451161   0.0756877
+sector_totalRubber & Plastics                     0.1335857   0.0686258
+sector_totalGlass, Ceramics & Stone Processing    0.2433777   0.0720341
+sector_totalMetal Industry                       -0.0828669   0.0790243
+sector_totalElectronics & Optical Products       -0.0346729   0.0828817
+sector_totalElectric Equipment                    0.1874749   0.0609784
+sector_totalMachinery Construction                0.0736726   0.0649819
+sector_totalVehicles & Parts                      0.3309560   0.0903592
+sector_totalFurniture, Jewellery, Toys & Others   0.2827011   0.0852945
+sector_totalOther Production                      0.3114370   0.0881639
+monthFeb                                         -0.0675819   0.0124861
+monthMar                                         -0.0133540   0.0127678
+monthApr                                         -0.0952688   0.0165151
+monthMay                                          0.0562138   0.0126162
+monthJun                                          0.0131508   0.0159629
+monthJul                                         -0.1525286   0.0139268
+monthAug                                          0.0558729   0.0139729
+monthSep                                          0.1167839   0.0154431
+monthOct                                          0.0845317   0.0173112
+monthNov                                          0.0168956   0.0158989
+monthDec                                          0.0806808   0.0120921
+s(calendar_time_shift).1                         -1.9637673   0.1170969
+s(calendar_time_shift).2                         -1.1639990   0.0984280
+s(calendar_time_shift).3                         -0.4158433   0.0946444
+s(calendar_time_shift).4                          0.1378125   0.0968703
+s(calendar_time_shift).5                          0.5119635   0.0946088
+s(calendar_time_shift).6                          0.6718890   0.0881037
+s(calendar_time_shift).7                          0.5613398   0.0871471
+s(calendar_time_shift).8                          0.2882589   0.0928342
+s(calendar_time_shift).9                          0.0525799   0.0959233
+s(calendar_time_shift).10                        -0.0491396   0.0918925
+s(calendar_time_shift).11                        -0.0641568   0.0934156
+s(calendar_time_shift).12                        -0.0227090   0.1037831
+s(calendar_time_shift).13                         0.0864748   0.1156058
+s(calendar_time_shift).14                         0.1631763   0.1240572
+s(calendar_time_shift).15                        -0.0016009   0.1260827
+s(calendar_time_shift).16                        -0.2728834   0.1222770
+s(calendar_time_shift).17                        -0.4943404   0.1119737
+s(calendar_time_shift).18                        -0.5804748   0.0983468
+s(calendar_time_shift).19                        -0.5572532   0.0865164
+s(calendar_time_shift).20                        -0.5206101   0.0800420
+s(calendar_time_shift).21                        -0.4588496   0.0804102
+s(calendar_time_shift).22                        -0.3350899   0.0852525
+s(calendar_time_shift).23                        -0.0908598   0.0919294
+s(calendar_time_shift).24                         0.2422120   0.1036976
+s(calendar_time_shift).25                         0.4895822   0.1187147
+s(calendar_time_shift).26                         0.6789333   0.1365952
+s(calendar_time_shift).27                         0.8484251   0.1584529
+s(calendar_time_shift).28                         0.9801460   0.1750660
+s(calendar_time_shift).29                         0.9243897   0.1728876
+s(calendar_time_shift).30                         0.6458908   0.1544090
+s(calendar_time_shift).31                         0.3779742   0.1320060
+s(calendar_time_shift).32                         0.2393717   0.1090954
+s(calendar_time_shift).33                         0.1478858   0.0892130
+s(calendar_time_shift).34                         0.0815143   0.0819245
+s(calendar_time_shift).35                         0.1301429   0.0886750
+s(calendar_time_shift).36                         0.2402026   0.0982649
+s(calendar_time_shift).37                         0.3117096   0.1078983
+s(calendar_time_shift).38                         0.3686087   0.1186228
+s(calendar_time_shift).39                         0.4260682   0.1230319
+s(calendar_time_shift).40                         0.4791795   0.1175438
+s(calendar_time_shift).41                         0.5922632   0.1122282
+s(calendar_time_shift).42                         0.6687422   0.1143683
+s(calendar_time_shift).43                         0.6776328   0.1105308
+s(calendar_time_shift).44                         0.6134443   0.0988941
+s(calendar_time_shift).45                         0.5490078   0.0928981
+s(calendar_time_shift).46                         0.5108556   0.0888494
+s(calendar_time_shift).47                         0.4392595   0.0821495
+s(calendar_time_shift).48                         0.3205869   0.0711683
+s(calendar_time_shift).49                         0.1622728   0.0458921
+s(particip_num).1                                30.7350971   0.7789199
+s(particip_num).2                                28.4687132   0.7548301
+s(particip_num).3                                26.0959466   0.7385257
+s(particip_num).4                                23.8568528   0.7285429
+s(particip_num).5                                22.2432600   0.7312643
+s(particip_num).6                                21.0594388   0.7167152
+s(particip_num).7                                19.8556123   0.6998277
+s(particip_num).8                                18.9604797   0.6823575
+s(particip_num).9                                18.2703103   0.6754371
+s(particip_num).10                               17.2975717   0.6918312
+s(particip_num).11                               16.2793875   0.6870924
+s(particip_num).12                               15.4908009   0.6695425
+s(particip_num).13                               14.9979608   0.6481252
+s(particip_num).14                               14.3627914   0.6295511
+s(particip_num).15                               13.8229004   0.6119941
+s(particip_num).16                               13.4814188   0.5912476
+s(particip_num).17                               13.0227996   0.5758928
+s(particip_num).18                               12.5503298   0.5619748
+s(particip_num).19                               12.2574438   0.5465930
+s(particip_num).20                               12.0707698   0.5382389
+s(particip_num).21                               11.7953131   0.5275253
+s(particip_num).22                               11.2295386   0.5078941
+s(particip_num).23                               10.8015254   0.4898391
+s(particip_num).24                               10.2335656   0.4763544
+s(particip_num).25                                9.5512269   0.4682487
+s(particip_num).26                                9.3527528   0.4544570
+s(particip_num).27                                9.3120264   0.4389556
+s(particip_num).28                                8.6083018   0.4407282
+s(particip_num).29                                7.8537816   0.4447685
+s(particip_num).30                                7.4809882   0.4423257
+s(particip_num).31                                7.4140522   0.4576241
+s(particip_num).32                                7.4294669   0.4564688
+s(particip_num).33                                7.2240326   0.4310373
+s(particip_num).34                                6.8066793   0.4067587
+s(particip_num).35                                6.2818378   0.4053925
+s(particip_num).36                                5.6788064   0.3899496
+s(particip_num).37                                5.1984719   0.3498669
+s(particip_num).38                                4.8074977   0.3177685
+s(particip_num).39                                4.4187904   0.2973107
+s(particip_num).40                                3.9424433   0.2873269
+s(particip_num).41                                3.7419783   0.2778776
+s(particip_num).42                                3.7371108   0.2760308
+s(particip_num).43                                3.6788629   0.2775920
+s(particip_num).44                                3.3300243   0.2647701
+s(particip_num).45                                2.5786098   0.2319281
+s(particip_num).46                                1.6997714   0.1854972
+s(particip_num).47                                0.9911911   0.1365440
+s(particip_num).48                                0.5703326   0.0903029
+s(particip_num).49                                0.2792077   0.0450549
+s(particip_length).1                            -29.0529268   0.7519696
+s(particip_length).2                            -27.1375035   0.7399359
+s(particip_length).3                            -25.2811121   0.7311205
+s(particip_length).4                            -23.6207056   0.7257623
+s(particip_length).5                            -22.1640207   0.7233863
+s(particip_length).6                            -20.9698369   0.7156401
+s(particip_length).7                            -19.9739409   0.7049394
+s(particip_length).8                            -19.0245571   0.6922518
+s(particip_length).9                            -18.1293751   0.6803503
+s(particip_length).10                           -17.3214431   0.6717169
+s(particip_length).11                           -16.6261809   0.6678850
+s(particip_length).12                           -16.0432072   0.6660990
+s(particip_length).13                           -15.4659152   0.6597834
+s(particip_length).14                           -14.8760501   0.6476425
+s(particip_length).15                           -14.4203561   0.6266436
+s(particip_length).16                           -14.0351077   0.6040687
+s(particip_length).17                           -13.6342150   0.5873342
+s(particip_length).18                           -13.1811694   0.5741114
+s(particip_length).19                           -12.7120740   0.5608537
+s(particip_length).20                           -12.3027095   0.5474263
+s(particip_length).21                           -11.9200397   0.5352029
+s(particip_length).22                           -11.5261217   0.5263361
+s(particip_length).23                           -11.0758393   0.5204887
+s(particip_length).24                           -10.5960374   0.5166605
+s(particip_length).25                           -10.2197308   0.5135387
+s(particip_length).26                            -9.8985802   0.5108459
+s(particip_length).27                            -9.5613379   0.5084569
+s(particip_length).28                            -9.1354420   0.5064984
+s(particip_length).29                            -8.6748564   0.5040874
+s(particip_length).30                            -8.2473798   0.4987832
+s(particip_length).31                            -7.7809690   0.4879419
+s(particip_length).32                            -7.2705609   0.4714929
+s(particip_length).33                            -6.7891663   0.4508837
+s(particip_length).34                            -6.3100279   0.4312394
+s(particip_length).35                            -5.7779954   0.4123013
+s(particip_length).36                            -5.3174859   0.3899095
+s(particip_length).37                            -5.0343843   0.3620979
+s(particip_length).38                            -4.8661115   0.3366165
+s(particip_length).39                            -4.6964546   0.3171716
+s(particip_length).40                            -4.4752317   0.3041001
+s(particip_length).41                            -4.1507815   0.2959299
+s(particip_length).42                            -3.7939145   0.2905224
+s(particip_length).43                            -3.4391093   0.2819849
+s(particip_length).44                            -3.0757034   0.2682160
+s(particip_length).45                            -2.6703867   0.2480542
+s(particip_length).46                            -2.1818857   0.2172805
+s(particip_length).47                            -1.6485583   0.1755987
+s(particip_length).48                            -1.0888473   0.1217267
+s(particip_length).49                            -0.5368628   0.0610580
+s(vg_statebus_past6m).1                          -0.1678439   0.1499226
+s(vg_statebus_past6m).2                          -0.7669598   0.1260314
+s(vg_statebus_past6m).3                          -1.2355561   0.1328642
+s(vg_statebus_past6m).4                          -1.4201504   0.1326693
+s(vg_statebus_past6m).5                          -1.7844622   0.1326738
+s(vg_statebus_past6m).6                          -1.7167153   0.1297913
+s(vg_statebus_past6m).7                          -1.6108887   0.1300775
+s(vg_statebus_past6m).8                          -1.6977862   0.1321354
+s(vg_statebus_past6m).9                          -1.5884030   0.1415221
+s(vg_statebus_past6m).10                         -1.3650106   0.1353099
+s(vg_statebus_past6m).11                         -0.7141764   0.0719777
+s(vg_comexp_past6m).1                             0.1642391   0.0834370
+s(vg_comexp_past6m).2                            -0.1306990   0.0674671
+s(vg_comexp_past6m).3                            -0.3996309   0.0660471
+s(vg_comexp_past6m).4                            -0.5564435   0.0707171
+s(vg_comexp_past6m).5                            -0.6347499   0.0728645
+s(vg_comexp_past6m).6                            -0.6758698   0.0712962
+s(vg_comexp_past6m).7                            -0.7261555   0.0710288
+s(vg_comexp_past6m).8                            -0.7518938   0.0734247
+s(vg_comexp_past6m).9                            -0.6377414   0.0718211
+s(vg_comexp_past6m).10                           -0.4379390   0.0567962
+s(vg_comexp_past6m).11                           -0.2129060   0.0283564
+                                                 z value  Pr(>|z|)    
+(Intercept)                                     -62.3065 < 2.2e-16 ***
+vg_westeastEastern                               -4.1170 3.839e-05 ***
+sector_totalTextile, Clothing, Leather           -7.8383 4.567e-15 ***
+sector_totalWood & Cork Products                 -2.0931 0.0363423 *  
+sector_totalPaper & Board Industry               -8.7832 < 2.2e-16 ***
+sector_totalPublishing & Printing                 3.2443 0.0011773 ** 
+sector_totalChemical Industry                    -4.5597 5.122e-06 ***
+sector_totalRubber & Plastics                     1.9466 0.0515849 .  
+sector_totalGlass, Ceramics & Stone Processing    3.3786 0.0007284 ***
+sector_totalMetal Industry                       -1.0486 0.2943505    
+sector_totalElectronics & Optical Products       -0.4183 0.6756971    
+sector_totalElectric Equipment                    3.0744 0.0021089 ** 
+sector_totalMachinery Construction                1.1337 0.2569033    
+sector_totalVehicles & Parts                      3.6627 0.0002496 ***
+sector_totalFurniture, Jewellery, Toys & Others   3.3144 0.0009184 ***
+sector_totalOther Production                      3.5325 0.0004117 ***
+monthFeb                                         -5.4126 6.213e-08 ***
+monthMar                                         -1.0459 0.2956008    
+monthApr                                         -5.7686 7.994e-09 ***
+monthMay                                          4.4557 8.362e-06 ***
+monthJun                                          0.8238 0.4100319    
+monthJul                                        -10.9521 < 2.2e-16 ***
+monthAug                                          3.9987 6.370e-05 ***
+monthSep                                          7.5622 3.963e-14 ***
+monthOct                                          4.8831 1.044e-06 ***
+monthNov                                          1.0627 0.2879243    
+monthDec                                          6.6722 2.520e-11 ***
+s(calendar_time_shift).1                        -16.7704 < 2.2e-16 ***
+s(calendar_time_shift).2                        -11.8259 < 2.2e-16 ***
+s(calendar_time_shift).3                         -4.3937 1.114e-05 ***
+s(calendar_time_shift).4                          1.4226 0.1548381    
+s(calendar_time_shift).5                          5.4114 6.254e-08 ***
+s(calendar_time_shift).6                          7.6261 2.419e-14 ***
+s(calendar_time_shift).7                          6.4413 1.185e-10 ***
+s(calendar_time_shift).8                          3.1051 0.0019022 ** 
+s(calendar_time_shift).9                          0.5481 0.5835926    
+s(calendar_time_shift).10                        -0.5348 0.5928219    
+s(calendar_time_shift).11                        -0.6868 0.4922159    
+s(calendar_time_shift).12                        -0.2188 0.8267967    
+s(calendar_time_shift).13                         0.7480 0.4544514    
+s(calendar_time_shift).14                         1.3153 0.1883987    
+s(calendar_time_shift).15                        -0.0127 0.9898691    
+s(calendar_time_shift).16                        -2.2317 0.0256360 *  
+s(calendar_time_shift).17                        -4.4148 1.011e-05 ***
+s(calendar_time_shift).18                        -5.9023 3.584e-09 ***
+s(calendar_time_shift).19                        -6.4410 1.187e-10 ***
+s(calendar_time_shift).20                        -6.5042 7.810e-11 ***
+s(calendar_time_shift).21                        -5.7064 1.154e-08 ***
+s(calendar_time_shift).22                        -3.9306 8.475e-05 ***
+s(calendar_time_shift).23                        -0.9884 0.3229737    
+s(calendar_time_shift).24                         2.3358 0.0195041 *  
+s(calendar_time_shift).25                         4.1240 3.723e-05 ***
+s(calendar_time_shift).26                         4.9704 6.681e-07 ***
+s(calendar_time_shift).27                         5.3544 8.583e-08 ***
+s(calendar_time_shift).28                         5.5987 2.159e-08 ***
+s(calendar_time_shift).29                         5.3468 8.954e-08 ***
+s(calendar_time_shift).30                         4.1830 2.877e-05 ***
+s(calendar_time_shift).31                         2.8633 0.0041924 ** 
+s(calendar_time_shift).32                         2.1942 0.0282246 *  
+s(calendar_time_shift).33                         1.6577 0.0973839 .  
+s(calendar_time_shift).34                         0.9950 0.3197400    
+s(calendar_time_shift).35                         1.4676 0.1422022    
+s(calendar_time_shift).36                         2.4444 0.0145077 *  
+s(calendar_time_shift).37                         2.8889 0.0038657 ** 
+s(calendar_time_shift).38                         3.1074 0.0018874 ** 
+s(calendar_time_shift).39                         3.4631 0.0005340 ***
+s(calendar_time_shift).40                         4.0766 4.570e-05 ***
+s(calendar_time_shift).41                         5.2773 1.311e-07 ***
+s(calendar_time_shift).42                         5.8473 4.997e-09 ***
+s(calendar_time_shift).43                         6.1307 8.748e-10 ***
+s(calendar_time_shift).44                         6.2030 5.538e-10 ***
+s(calendar_time_shift).45                         5.9098 3.426e-09 ***
+s(calendar_time_shift).46                         5.7497 8.941e-09 ***
+s(calendar_time_shift).47                         5.3471 8.939e-08 ***
+s(calendar_time_shift).48                         4.5046 6.649e-06 ***
+s(calendar_time_shift).49                         3.5360 0.0004063 ***
+s(particip_num).1                                39.4586 < 2.2e-16 ***
+s(particip_num).2                                37.7154 < 2.2e-16 ***
+s(particip_num).3                                35.3352 < 2.2e-16 ***
+s(particip_num).4                                32.7460 < 2.2e-16 ***
+s(particip_num).5                                30.4175 < 2.2e-16 ***
+s(particip_num).6                                29.3833 < 2.2e-16 ***
+s(particip_num).7                                28.3721 < 2.2e-16 ***
+s(particip_num).8                                27.7867 < 2.2e-16 ***
+s(particip_num).9                                27.0496 < 2.2e-16 ***
+s(particip_num).10                               25.0026 < 2.2e-16 ***
+s(particip_num).11                               23.6932 < 2.2e-16 ***
+s(particip_num).12                               23.1364 < 2.2e-16 ***
+s(particip_num).13                               23.1405 < 2.2e-16 ***
+s(particip_num).14                               22.8143 < 2.2e-16 ***
+s(particip_num).15                               22.5867 < 2.2e-16 ***
+s(particip_num).16                               22.8016 < 2.2e-16 ***
+s(particip_num).17                               22.6132 < 2.2e-16 ***
+s(particip_num).18                               22.3325 < 2.2e-16 ***
+s(particip_num).19                               22.4252 < 2.2e-16 ***
+s(particip_num).20                               22.4264 < 2.2e-16 ***
+s(particip_num).21                               22.3597 < 2.2e-16 ***
+s(particip_num).22                               22.1100 < 2.2e-16 ***
+s(particip_num).23                               22.0512 < 2.2e-16 ***
+s(particip_num).24                               21.4831 < 2.2e-16 ***
+s(particip_num).25                               20.3978 < 2.2e-16 ***
+s(particip_num).26                               20.5801 < 2.2e-16 ***
+s(particip_num).27                               21.2141 < 2.2e-16 ***
+s(particip_num).28                               19.5320 < 2.2e-16 ***
+s(particip_num).29                               17.6581 < 2.2e-16 ***
+s(particip_num).30                               16.9128 < 2.2e-16 ***
+s(particip_num).31                               16.2012 < 2.2e-16 ***
+s(particip_num).32                               16.2760 < 2.2e-16 ***
+s(particip_num).33                               16.7596 < 2.2e-16 ***
+s(particip_num).34                               16.7339 < 2.2e-16 ***
+s(particip_num).35                               15.4957 < 2.2e-16 ***
+s(particip_num).36                               14.5629 < 2.2e-16 ***
+s(particip_num).37                               14.8584 < 2.2e-16 ***
+s(particip_num).38                               15.1289 < 2.2e-16 ***
+s(particip_num).39                               14.8625 < 2.2e-16 ***
+s(particip_num).40                               13.7211 < 2.2e-16 ***
+s(particip_num).41                               13.4663 < 2.2e-16 ***
+s(particip_num).42                               13.5387 < 2.2e-16 ***
+s(particip_num).43                               13.2528 < 2.2e-16 ***
+s(particip_num).44                               12.5770 < 2.2e-16 ***
+s(particip_num).45                               11.1181 < 2.2e-16 ***
+s(particip_num).46                                9.1633 < 2.2e-16 ***
+s(particip_num).47                                7.2591 3.896e-13 ***
+s(particip_num).48                                6.3158 2.688e-10 ***
+s(particip_num).49                                6.1971 5.753e-10 ***
+s(particip_length).1                            -38.6358 < 2.2e-16 ***
+s(particip_length).2                            -36.6755 < 2.2e-16 ***
+s(particip_length).3                            -34.5786 < 2.2e-16 ***
+s(particip_length).4                            -32.5461 < 2.2e-16 ***
+s(particip_length).5                            -30.6393 < 2.2e-16 ***
+s(particip_length).6                            -29.3022 < 2.2e-16 ***
+s(particip_length).7                            -28.3343 < 2.2e-16 ***
+s(particip_length).8                            -27.4821 < 2.2e-16 ***
+s(particip_length).9                            -26.6471 < 2.2e-16 ***
+s(particip_length).10                           -25.7868 < 2.2e-16 ***
+s(particip_length).11                           -24.8938 < 2.2e-16 ***
+s(particip_length).12                           -24.0853 < 2.2e-16 ***
+s(particip_length).13                           -23.4409 < 2.2e-16 ***
+s(particip_length).14                           -22.9695 < 2.2e-16 ***
+s(particip_length).15                           -23.0121 < 2.2e-16 ***
+s(particip_length).16                           -23.2343 < 2.2e-16 ***
+s(particip_length).17                           -23.2137 < 2.2e-16 ***
+s(particip_length).18                           -22.9593 < 2.2e-16 ***
+s(particip_length).19                           -22.6656 < 2.2e-16 ***
+s(particip_length).20                           -22.4737 < 2.2e-16 ***
+s(particip_length).21                           -22.2720 < 2.2e-16 ***
+s(particip_length).22                           -21.8988 < 2.2e-16 ***
+s(particip_length).23                           -21.2797 < 2.2e-16 ***
+s(particip_length).24                           -20.5087 < 2.2e-16 ***
+s(particip_length).25                           -19.9006 < 2.2e-16 ***
+s(particip_length).26                           -19.3768 < 2.2e-16 ***
+s(particip_length).27                           -18.8046 < 2.2e-16 ***
+s(particip_length).28                           -18.0365 < 2.2e-16 ***
+s(particip_length).29                           -17.2090 < 2.2e-16 ***
+s(particip_length).30                           -16.5350 < 2.2e-16 ***
+s(particip_length).31                           -15.9465 < 2.2e-16 ***
+s(particip_length).32                           -15.4203 < 2.2e-16 ***
+s(particip_length).33                           -15.0575 < 2.2e-16 ***
+s(particip_length).34                           -14.6323 < 2.2e-16 ***
+s(particip_length).35                           -14.0140 < 2.2e-16 ***
+s(particip_length).36                           -13.6377 < 2.2e-16 ***
+s(particip_length).37                           -13.9034 < 2.2e-16 ***
+s(particip_length).38                           -14.4560 < 2.2e-16 ***
+s(particip_length).39                           -14.8073 < 2.2e-16 ***
+s(particip_length).40                           -14.7163 < 2.2e-16 ***
+s(particip_length).41                           -14.0262 < 2.2e-16 ***
+s(particip_length).42                           -13.0589 < 2.2e-16 ***
+s(particip_length).43                           -12.1961 < 2.2e-16 ***
+s(particip_length).44                           -11.4673 < 2.2e-16 ***
+s(particip_length).45                           -10.7653 < 2.2e-16 ***
+s(particip_length).46                           -10.0418 < 2.2e-16 ***
+s(particip_length).47                            -9.3882 < 2.2e-16 ***
+s(particip_length).48                            -8.9450 < 2.2e-16 ***
+s(particip_length).49                            -8.7927 < 2.2e-16 ***
+s(vg_statebus_past6m).1                          -1.1195 0.2629111    
+s(vg_statebus_past6m).2                          -6.0855 1.162e-09 ***
+s(vg_statebus_past6m).3                          -9.2994 < 2.2e-16 ***
+s(vg_statebus_past6m).4                         -10.7044 < 2.2e-16 ***
+s(vg_statebus_past6m).5                         -13.4500 < 2.2e-16 ***
+s(vg_statebus_past6m).6                         -13.2267 < 2.2e-16 ***
+s(vg_statebus_past6m).7                         -12.3841 < 2.2e-16 ***
+s(vg_statebus_past6m).8                         -12.8488 < 2.2e-16 ***
+s(vg_statebus_past6m).9                         -11.2237 < 2.2e-16 ***
+s(vg_statebus_past6m).10                        -10.0880 < 2.2e-16 ***
+s(vg_statebus_past6m).11                         -9.9222 < 2.2e-16 ***
+s(vg_comexp_past6m).1                             1.9684 0.0490196 *  
+s(vg_comexp_past6m).2                            -1.9372 0.0527176 .  
+s(vg_comexp_past6m).3                            -6.0507 1.442e-09 ***
+s(vg_comexp_past6m).4                            -7.8686 3.587e-15 ***
+s(vg_comexp_past6m).5                            -8.7114 < 2.2e-16 ***
+s(vg_comexp_past6m).6                            -9.4797 < 2.2e-16 ***
+s(vg_comexp_past6m).7                           -10.2234 < 2.2e-16 ***
+s(vg_comexp_past6m).8                           -10.2403 < 2.2e-16 ***
+s(vg_comexp_past6m).9                            -8.8796 < 2.2e-16 ***
+s(vg_comexp_past6m).10                           -7.7107 1.251e-14 ***
+s(vg_comexp_past6m).11                           -7.5082 5.993e-14 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+

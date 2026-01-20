@@ -1,0 +1,435 @@
+---
+title: "Data Cleaning"
+output: pdf_document
+date: "2026-01-18"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+```{r}
+library(haven)
+library(foreign)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(ggplot2)
+library(zoo)
+library(xts)
+library(forecast)
+library(lubridate)
+library(slider)
+```
+
+```{r}
+data <- read_dta('../Dataset/data.dta') # if use real data, then use the path and name of real data
+```
+
+```{r}
+# ------------------------------------------------------------
+# Select relevant variables and restrict sample period
+# ------------------------------------------------------------
+reduced_data <- data %>%
+  # Keep only variables needed for analysis
+  select(year, month, idnum, sector_total, fedstaifo, vg_westeast, vg_size, online, vg_statebus, vg_stin, vg_orders, vg_foreord, vg_demand, vg_demand_vpq, vg_ordvpm, vg_ord_vpq, vg_provpm, vg_pro_vpq, vg_pricevpm, vg_price_vpq, vg_emplpast, vg_proexp, vg_priceexp, vg_expexp, vg_emplexp, vg_comexp) %>%
+  # Keep observations after 1991.01
+  filter(year > 1990)
+
+# ------------------------------------------------------------
+# Build basic cleaned dataset and harmonize questionnaire changes
+# ------------------------------------------------------------
+cleaned_data_basic <- reduced_data %>%
+  # Create year-month identifier
+  mutate(year_month = sprintf("%d-%02d", year, month)) %>%
+  # Harmonize variables before/after questionnaire reform (Dec 2001)
+  mutate(
+    demand = case_when(
+      year_month <= "2001-11" ~ vg_demand,
+      year_month >= "2002-01" ~ vg_demand_vpq
+    ),
+    ord = case_when(
+      year_month <= "2001-11" ~ vg_ordvpm,
+      year_month >= "2002-01" ~ vg_ord_vpq
+    ),
+    pro = case_when(
+      year_month <= "2001-11" ~ vg_provpm,
+      year_month >= "2002-01" ~ vg_pro_vpq
+    ),
+    price = case_when(
+      year_month <= "2001-11" ~ vg_pricevpm,
+      year_month >= "2002-01" ~ vg_price_vpq
+    )
+  ) %>%
+  # Recode online variable into binary indicator
+  mutate(
+    online = case_when(
+      online == 2 ~ 1L,
+      online %in% c(0, 1, 3, 4, 5) ~ 0L,
+      TRUE ~ online
+    ) # 1:online, 0:non-online
+  ) %>%
+  # drop empty strings for size
+  mutate(vg_size = as.character(vg_size),
+         vg_size = na_if(vg_size, "")) %>%
+  # Drop observations without firm identifier
+  filter(!is.na(idnum))
+
+# ------------------------------------------------------------
+# Keep observations with at least one answered survey item
+# ------------------------------------------------------------
+cleaned_data <- cleaned_data_basic %>%
+  filter(
+    # Drop observations where all key variables are missing (no unit nonresponse)
+    !if_all(c(
+      vg_statebus, vg_stin, vg_orders, vg_foreord,
+      demand, ord, pro, price,
+      vg_emplpast, vg_proexp, vg_priceexp,
+      vg_expexp, vg_emplexp, vg_comexp
+    ), ~ is.na(.))
+  ) %>%
+  # Sort and deduplicate firm-month observations
+  arrange(year, month, idnum) %>%
+  distinct(year, month, idnum, .keep_all = TRUE) %>%
+  # Keep firms with at least 12 observed months
+  group_by(idnum) %>%
+  filter(n() >= 12) %>%
+  ungroup() %>%
+  # Mark these observations as non–unit-nonresponse
+  mutate(unit_nonres = 0)
+
+# ------------------------------------------------------------
+# Identify pure unit nonresponse observations
+# ------------------------------------------------------------
+cleaned_data_unitnonresponse <- cleaned_data_basic %>%
+  filter(
+    # Keep observations where all survey items are missing (unit nonresponse)
+    if_all(c(
+      vg_statebus, vg_stin, vg_orders, vg_foreord,
+      demand, ord, pro, price,
+      vg_emplpast, vg_proexp, vg_priceexp,
+      vg_expexp, vg_emplexp, vg_comexp
+    ), ~ is.na(.))
+  ) %>%
+  # Sort and deduplicate firm-month observations
+  arrange(year, month, idnum) %>%
+  distinct(year, month, idnum, .keep_all = TRUE) %>%
+  # Keep only companies with sufficient participation
+  semi_join(cleaned_data, by = "idnum") %>%
+  # Mark as unit nonresponse
+  mutate(unit_nonres = 1)
+
+# ------------------------------------------------------------
+# Combine response and unit nonresponse data
+# ------------------------------------------------------------
+cleaned_data_combined <- bind_rows(cleaned_data, cleaned_data_unitnonresponse)
+
+
+# ------------------------------------------------------------
+# Expand firm-month panels and fill static variables (firm characteristics)
+# ------------------------------------------------------------
+
+# Define static variables (firm characteristics)
+static_vars <- c("fedstaifo", "vg_westeast", "vg_size", 'sector_total') 
+
+cleaned_data_fill <- cleaned_data_combined %>%
+  select(
+    year, month, year_month, idnum, all_of(static_vars),
+    online, vg_statebus, vg_stin, vg_orders, vg_foreord,
+    demand, ord, pro, price, vg_emplpast, vg_proexp,
+    vg_priceexp, vg_expexp, vg_emplexp, vg_comexp, unit_nonres
+  ) %>%
+  # Create date variable and original-observation flag
+  mutate(
+    date  = ymd(paste(year, month, "01", sep = "-")),
+    .orig = TRUE
+  ) %>%
+  # Ensure complete monthly sequence for each firm
+  group_by(idnum) %>%
+  complete(date = seq(min(date), max(date), by = "month")) %>%
+  ungroup() %>%
+  arrange(idnum, date) %>%
+  # Mark imputed rows and assign unit nonresponse to gaps
+  mutate(
+    .orig       = if_else(is.na(year), FALSE, TRUE),
+    unit_nonres = if_else(.orig, unit_nonres, 1L),
+    year        = year(date),
+    month       = month(date),
+    year_month  = format(date, "%Y-%m")
+  ) %>%
+  # Identify consecutive runs of response/nonresponse
+  group_by(idnum) %>%
+  arrange(date) %>%
+  mutate(
+    run_grp = cumsum(unit_nonres != lag(unit_nonres, default = first(unit_nonres)))
+  ) %>%
+  group_by(idnum, run_grp) %>%
+  mutate(
+    run_len = if (first(unit_nonres) == 1) n() else 0L
+  ) %>%
+  ungroup() %>%
+  # Carry forward static variables only for short nonresponse gaps (≤ 12 months)
+  group_by(idnum) %>%
+  arrange(date) %>%
+  mutate(across(
+    all_of(static_vars),
+    ~ {
+      if (all(is.na(.x))) {
+        .x
+      } else {
+        before <- na.locf(.x, na.rm = FALSE, maxgap = 12)
+        after  <- na.locf(.x, fromLast = TRUE, maxgap = 12)
+        if (length(before) == length(after)) {
+          case_when(
+            .orig == FALSE & is.na(.x) & run_len <= 12 & before == after ~ before,
+            TRUE ~ .x
+          )
+        } else {
+          .x
+        }
+      }
+    }
+  )) %>%
+  ungroup() %>%
+  select(
+    year, month, year_month, idnum, all_of(static_vars),
+    online, vg_statebus, vg_stin, vg_orders, vg_foreord,
+    demand, ord, pro, price, vg_emplpast, vg_proexp,
+    vg_priceexp, vg_expexp, vg_emplexp, vg_comexp, unit_nonres
+  )
+
+# ------------------------------------------------------------
+# Identify firms with long intermediate nonresponse spells
+# ------------------------------------------------------------
+longabsence_ids <-
+  cleaned_data_fill %>%
+  mutate(date = ymd(paste(year, month, "01", sep = "-"))) %>%
+  arrange(idnum, date) %>%                      
+  group_by(idnum) %>%
+  mutate(
+    run_grp = cumsum(unit_nonres != lag(unit_nonres, default = first(unit_nonres)))
+  ) %>%
+  ungroup() %>%
+  group_by(idnum, run_grp) %>%
+  summarise(
+    run_len = n(),
+    unit_flag = first(unit_nonres),
+    .groups = 'drop_last'
+  ) %>%
+  mutate(
+    min_grp = min(run_grp),
+    max_grp = max(run_grp)
+  ) %>%
+  ungroup() %>%
+  # Select long nonresponse spells not at the end of the panel
+  filter(
+    unit_flag == 1,
+    run_len >= 12,
+    run_grp != max_grp
+  ) %>%
+  pull(idnum) %>%
+  unique()
+
+# Drop firms with long absences (>= 12 months)
+cleaned_data_fill1 <-
+  cleaned_data_fill %>%
+  filter(!idnum %in% longabsence_ids)
+
+# ------------------------------------------------------------
+# Trim trailing nonresponse after long inactivity
+# ------------------------------------------------------------
+cleaned_data_fill1 <- cleaned_data_fill1 %>%
+  mutate(date = ymd(paste(year, month, "01", sep = "-")))
+
+# Last year-month of real data in EBDC
+target_date <- ymd('2024-06-01') 
+
+# Last observed response per firm
+last_response_df <- cleaned_data_fill1 %>%
+  filter(unit_nonres == 0) %>%
+  group_by(idnum) %>%
+  summarise(last_response_date = max(date, na.rm = TRUE), .groups = 'drop')
+
+cleaned_data_final <- cleaned_data_fill1 %>%
+  left_join(last_response_df, by = 'idnum') %>%
+  # Flag long inactivity spells after last response
+  mutate(months_diff = interval(last_response_date, target_date) %/% months(1),
+         to_delete = months_diff >= 12 & date > last_response_date & unit_nonres == 1) %>%
+  filter(!to_delete | is.na(to_delete)) %>%
+  select(
+    year, month, year_month, idnum, all_of(static_vars),
+    online, unit_nonres, vg_statebus, vg_stin, vg_orders, vg_foreord,
+    demand, ord, pro, price, vg_emplpast, vg_proexp,
+    vg_priceexp, vg_expexp, vg_emplexp, vg_comexp
+  )
+
+# ------------------------------------------------------------
+# Keep only months after the first observed response
+# ------------------------------------------------------------
+cleaned_data_final <- cleaned_data_final %>%
+  mutate(date = ymd(paste(year, month, "01", sep = "-"))) %>%
+  arrange(idnum, date) %>%
+  group_by(idnum) %>%
+  mutate(seen_response = cumsum(if_else(unit_nonres == 0L, 1L, 0L, missing = 0L))) %>%
+  filter(seen_response > 0) %>%
+  ungroup() %>%
+  select(-seen_response, -date)
+
+# ------------------------------------------------------------
+# Adjust structural Missingness
+# ------------------------------------------------------------
+# Since April 2020, price and employment questions are asked only online.
+# Missing values for offline respondents are structural and coded as -1.
+
+cleaned_data_final <- cleaned_data_final %>%
+  mutate(
+    date  = ymd(paste(year, month, "01", sep = "-")),
+    price = if_else(date >= ymd("2020-04-01") & online == 0 & unit_nonres == 0, -1, price),
+    vg_emplpast = if_else(date >= ymd("2020-04-01") & online == 0 & unit_nonres == 0, -1, vg_emplpast)
+  ) %>%
+  select(
+    year, month, year_month, idnum, all_of(static_vars),
+    online, unit_nonres, vg_statebus, vg_stin, vg_orders, vg_foreord,
+    demand, ord, pro, price, vg_emplpast, vg_proexp,
+    vg_priceexp, vg_expexp, vg_emplexp, vg_comexp
+  )
+
+# ------------------------------------------------------------
+# Adjust time index around questionnaire reform
+# ------------------------------------------------------------
+# In December 2001, the survey was not conducted due to an questionnaire adjustment.
+# To preserve a continuous monthly time index, all observations before 2001-12
+# are shifted forward by one month.
+
+cleaned_data_full <- cleaned_data_final %>%
+  filter(year_month != '2001-12') %>%
+  mutate(
+    .date = ymd(paste0(year_month, '-01')),
+    year_month_shift = if_else(
+      .date <= ymd('2001-11-01'),
+      format(.date %m+% months(1), '%Y-%m'),
+      year_month
+    )
+  ) %>%
+  select(-.date)
+
+# ------------------------------------------------------------
+# Construct time variables and month dummies
+# ------------------------------------------------------------
+cleaned_data_full <- cleaned_data_full %>%
+  arrange(idnum, year, month) %>%
+  mutate(
+    date = as.Date(paste(year_month, "01", sep = "-"), format = "%Y-%m-%d"),
+    shift_date = as.Date(paste(year_month_shift, "01", sep = "-"), format = "%Y-%m-%d"),
+    calendar_time = (year - 1991) * 12 + month,
+    calendar_time_shift = (year(shift_date) - 1991) * 12 + (month(shift_date) - 2) + 1,
+    is_jan = ifelse(month == 1, 1, 0),
+    is_feb = ifelse(month == 2, 1, 0),
+    is_mar = ifelse(month == 3, 1, 0),
+    is_apr = ifelse(month == 4, 1, 0),
+    is_may = ifelse(month == 5, 1, 0),
+    is_jun = ifelse(month == 6, 1, 0),
+    is_jul = ifelse(month == 7, 1, 0),
+    is_aug = ifelse(month == 8, 1, 0),
+    is_sep = ifelse(month == 9, 1, 0),
+    is_oct = ifelse(month == 10, 1, 0),
+    is_nov = ifelse(month == 11, 1, 0),
+    is_dec = ifelse(month == 12, 1, 0)
+  )
+# Convert identifiers to character 
+cleaned_data_full1 <- cleaned_data_full %>%
+  mutate(
+    idnum         = as.character(idnum),
+    fedstaifo     = as.character(fedstaifo),
+    vg_westeast   = as.character(vg_westeast)
+  )
+
+# ------------------------------------------------------------
+# Export imputation dataset (post-2014)
+# ------------------------------------------------------------
+imputation_data <- cleaned_data_full1 %>% filter(shift_date >= as.Date("2014-01-01"))
+
+write_dta(imputation_data, "../Dataset/imputation_data.dta")
+
+# ------------------------------------------------------------
+# Construct item nonresponse analysis dataset
+# ------------------------------------------------------------
+Vs_rq_past6m <- c("vg_statebus", "vg_comexp")
+
+item_nonresponse_data <- cleaned_data_full %>%
+  group_by(idnum, year, month) %>%
+  arrange(unit_nonres) %>%
+  slice(1) %>%
+  ungroup() %>%
+  # Drop firms from excluded sectors (25, 49) due to small sample size
+  filter(!idnum %in% (
+    cleaned_data_full %>% filter(sector_total %in% c(25, 49)) %>% 
+      pull(idnum)
+  )) %>%
+  # Compute past 6-month averages (BS and BE) excluding the current month
+  arrange(idnum, shift_date) %>%
+  group_by(idnum) %>%
+  mutate(
+    across(
+      all_of(Vs_rq_past6m),
+      ~ slide_dbl(
+        lag(.x),
+        ~ {
+          m <- mean(.x, na.rm = TRUE)
+          if (is.nan(m)) NA_real_ else m
+        },
+        .before = 5,
+        .complete = FALSE
+      ),
+      .names = "{.col}_past6m"
+    )
+  ) %>%
+  ungroup() %>%
+  # Construct participation number
+  arrange(idnum, shift_date) %>%
+  group_by(idnum) %>%
+  mutate(
+    particip_num = lag(cumsum(unit_nonres == 0), default = 0)
+  ) %>%
+  ungroup() %>%
+  # Identify the first observed response month for each firm
+  group_by(idnum) %>%
+  mutate(
+    first_response_date = min(shift_date[unit_nonres == 0], na.rm = TRUE)
+  ) %>%
+  ungroup() %>%
+  # Compute participation length since entry
+  mutate(
+    month_enter_shift = month(first_response_date),
+    year_enter_shift  = year(first_response_date),
+    calendar_time_enter_shift =
+      (year_enter_shift - 1991) * 12 + (month_enter_shift - 2) + 1,
+    particip_length = calendar_time_shift - calendar_time_enter_shift
+  ) %>%
+  # Remove intermediate helper variable
+  select(-c(first_response_date, month_enter_shift, year_enter_shift))
+
+write_dta(item_nonresponse_data, "../Dataset/item_nonresponse_data.dta")
+
+# ------------------------------------------------------------
+# Unit nonresponse dataset (exclude structural zeros)
+# ------------------------------------------------------------
+# By construction, participation length and participation number are both zero
+# in a firm's first survey month. In this entry month, unit nonresponse is
+# structurally zero by definition. To avoid distorting the estimation,
+# these observations are excluded from the analysis.
+
+unit_nonresponse_data <- item_nonresponse_data %>%
+  filter(particip_num > 0)
+
+write_dta(unit_nonresponse_data, "../Dataset/unit_nonresponse_data.dta")
+
+
+```
+

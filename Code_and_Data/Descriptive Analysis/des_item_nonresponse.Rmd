@@ -1,0 +1,160 @@
+---
+title: "Descriptive Analysis: Item Nonresponse"
+output: pdf_document
+date: "2026-01-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+```{r}
+library(haven)
+library(dplyr)
+library(naniar)
+library(ggplot2)
+library(tidyr)
+library(scales)
+library(pheatmap)
+```
+
+```{r}
+item_nonresponse_data <- read_dta("../Dataset/item_nonresponse_data.dta")
+```
+
+Question 8 (development employees last month: vg_emplpast) has been asked since 2018-07. Question 12 (expected employees: vg_emplexp) was a special question before 1997-07. Therefore we exclude these two questions in the analysis.
+We analyzed item nonresponse of Inventories, Business Situation, Production Expectation, Price Expectation, Orders, Foreign Orders, Export Expectation, Business Expectation, Production (vs. Past), Prices (vs. Past), Orders (vs. Past) and Demand (vs. Past)
+```{r}
+# list of variables of standard questions but with out workforce variables
+# no vg_emplpast and vg_emplexp
+Vs_rq <- c('vg_statebus','vg_stin','vg_orders',
+           'vg_foreord','demand','ord',
+           'pro','price','vg_proexp',
+           'vg_priceexp','vg_expexp','vg_comexp')
+
+
+# Keep only the rows where unit_nonres == 0 (keep only unit responses)
+item_nonresponse_data_des <- item_nonresponse_data %>% 
+  filter(unit_nonres == 0)
+
+```
+
+# Lists for variables, months and colors
+```{r}
+# Names for variables
+var_labels <- c(
+  vg_statebus = "Business Situation",
+  vg_stin     = "Inventories",
+  vg_orders   = "Orders",
+  vg_foreord  = "Foreign Orders",
+
+  demand      = "Demand (vs. Past)",
+  ord         = "Orders (vs. Past)",
+  pro         = "Production (vs. Past)",
+  price       = "Prices (vs. Past)",
+
+  vg_proexp   = "Production Expectation",
+  vg_priceexp = "Price Expectation",
+  vg_expexp   = "Export Expectation",
+  vg_comexp   = "Business Expectation"
+)
+
+# Names for months
+month_labels <- c(
+  "Jan","Feb","Mar","Apr","May","Jun",
+  "Jul","Aug","Sep","Oct","Nov","Dec"
+)
+
+# List of color
+variable_colors <- c(
+  demand       = "#1f77b4",
+  ord          = "#ff7f0e",
+  price        = "#2ca02c",
+  pro          = "#d62728",
+  vg_comexp    = "#9467bd",
+  vg_expexp    = "#8c564b",
+  vg_foreord   = "#e377c2",
+  vg_orders    = "#7f7f7f",
+  vg_priceexp  = "#bcbd22",
+  vg_proexp    = "#17becf",
+  vg_statebus  = "#aec7e8",
+  vg_stin      = "#ffbb78"
+)
+
+```
+
+## Missing Rate by month
+```{r}
+df <- item_nonresponse_data_des[c(Vs_rq, "month")] %>%
+  mutate(across(where(haven::is.labelled), haven::zap_labels))
+
+
+df_long <- df %>%
+  pivot_longer(cols = -month, names_to = "variable", values_to = "value")
+
+missing_rate <- df_long %>%
+  group_by(month, variable) %>%
+  summarise(missing_rate = mean(is.na(value)), .groups = "drop")
+
+p_des <- ggplot(missing_rate, aes(month, missing_rate, color = variable)) +
+  geom_line(size = 0.35, alpha = 1) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 0.01)
+  )  +
+  labs(
+    x = "Month",
+    y = "Missing Rate",
+    color = "Question"
+  ) +
+  scale_x_continuous(breaks = 1:12, labels = month_labels) +
+  scale_color_manual(
+    values = variable_colors,
+    labels = var_labels[names(variable_colors)]
+  ) +
+  theme_minimal()
+
+
+p_des
+
+ggsave("outputs/Item_Nonresponse_Rate_by_Month.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+
+# Missing Rate by Time
+```{r}
+df <- item_nonresponse_data_des[c(Vs_rq, "shift_date")] %>%
+  mutate(across(where(haven::is.labelled), haven::zap_labels))
+
+df_long <- df %>%
+  pivot_longer(cols = -shift_date, names_to = "variable", values_to = "value")
+
+missing_rate <- df_long %>%
+  group_by(shift_date, variable) %>%
+  summarise(missing_rate = mean(is.na(value)), .groups = "drop")
+
+p_des <- ggplot(missing_rate, aes(shift_date, missing_rate, color = variable)) +
+  geom_line(size = 0.2, alpha = 0.8) +
+  scale_y_continuous(
+    labels = scales::percent_format(accuracy = 0.01)
+  )  +
+  scale_color_manual(
+    values = variable_colors,
+    labels = var_labels[names(variable_colors)]
+  ) +
+  labs(
+    x = "Time",
+    y = "Item nonresponse rate (%)",
+    color = "Question"
+  ) +
+  theme_minimal()
+
+p_des
+
+ggsave("outputs/Item_Nonresponse_Rate_by_time.pdf", p_des, device = "pdf", width = 8, height = 4.5)
+```
+

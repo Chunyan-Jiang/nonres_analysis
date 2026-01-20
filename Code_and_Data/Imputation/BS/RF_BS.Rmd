@@ -1,0 +1,419 @@
+# -------------------------------------------------------------------
+# Purpose:
+#   Random Forest (RF) imputation for BS + simulation-based evaluation.
+#   Covariates are pre-imputed using LOCF to obtain a complete feature set for RF.
+#
+# Workflow:
+#   1) Load and prepare data (generate lags, set data types)
+#   2) Pre-impute covariates via LOCF (forward + backward fill)
+#   3) Load helper functions (masking, rolling RF imputation, evaluation)
+#   4) Tune RF hyperparameters via OOB error (optional, used to select mtry/ntree/nodesize)
+#   5) Run simulations for block_length = 1..6 (n_sim = 30, fixed seed)
+#   6) Save results (RData + CSV summaries) and generate balance plot
+#
+# Key settings (used below):
+#   - sampling_rate = 0.1
+#   - block_length  = 1..6
+#   - n_sim         = 30
+#   - seed          = 123 (seed + s per simulation run)
+#   - RF hyperparams used in simulation: mtry = 3, num.trees = 350, min.node.size = 1
+#
+# Outputs:
+#   outputs/RF results/ (CSV files + RData + balance plot PDF)
+# -------------------------------------------------------------------
+
+
+# Set the working directory to the current file's location.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+# Load Packages:
+# - Data wrangling: dplyr, tidyr, purrr, rlang
+# - I/O: haven
+# - Imputation helpers: zoo, missForest
+# - Random forest: randomForest, ranger, caret
+# - Evaluation metrics: psych, Metrics
+```{r}
+library(haven)
+library(tidyr)
+library(purrr)
+library(Metrics)
+library(rlang)
+library(psych)
+library(dplyr)
+library(missForest)
+library(caret)
+library(randomForest)
+library(ranger)
+library(zoo)
+library(ggplot2)
+```
+
+# Load Dataset
+# We use the prepared panel dataset for imputation evaluation.
+# Note: simulation repeats n_sim times; runtime can be substantial on the full sample of read data
+```{r}
+filled.data <- read_dta("../../Dataset/imputation_data.dta")
+```
+
+
+# Generate lagged versions of BS and BE (1–4 lags) within each firm (idnum).
+# These lags serve as predictors for RF, especially for rolling imputation within masked blocks.
+```{r}
+filled.data <- filled.data%>%
+  arrange(idnum, shift_date) %>%         
+  group_by(idnum) %>%              
+  mutate(
+    vg_statebus_lag1 = lag(vg_statebus, 1),    
+    vg_statebus_lag2 = lag(vg_statebus, 2),    
+    vg_statebus_lag3 = lag(vg_statebus, 3),
+    vg_statebus_lag4 = lag(vg_statebus, 4),    
+    vg_comexp_lag1 = lag(vg_comexp, 1),    
+    vg_comexp_lag2 = lag(vg_comexp, 2),    
+    vg_comexp_lag3 = lag(vg_comexp, 3),    
+    vg_comexp_lag4 = lag(vg_comexp, 4)
+  ) %>%
+  ungroup()
+```
+
+# Convert covariates to the appropriate data types for RF:
+# - Discrete/ordinal variables -> factor
+# - Continuous variables -> numeric
+```{r}
+discrete.covariates <- c('idnum','vg_westeast','sector_total','online','is_dec','is_aug','vg_statebus','vg_comexp'
+                         ,'vg_statebus_lag1'
+                           ,'vg_statebus_lag2'
+                           ,'vg_statebus_lag3'
+                           ,'vg_statebus_lag4'
+                           ,'vg_comexp_lag1'
+                           ,'vg_comexp_lag2'
+                           ,'vg_comexp_lag3'
+                           ,'vg_comexp_lag4')
+continuous.covariates <- c('calendar_time')
+filled.data <- filled.data%>%
+  mutate(across(all_of(discrete.covariates), as.factor))%>%
+  mutate(across(all_of(continuous.covariates), as.numeric))
+filled.data <- as.data.frame(filled.data)
+```
+
+# Pre-imputation of covariates:
+# RF requires a complete feature set. We therefore fill missing values in covariates
+# using LOCF forward-fill + backward-fill (NOCB) within each id.
+# The target variable (vg_statebus) is NOT imputed here; it will be masked and imputed later.
+
+```{r}
+all.covariates1 <- c('idnum','vg_westeast','sector_total','online'
+                ,'vg_statebus_lag1'
+                ,'vg_statebus_lag2'
+                ,'vg_statebus_lag3'
+                ,'vg_statebus_lag4'
+                ,'vg_comexp_lag1'
+                ,'vg_comexp_lag2'
+                ,'vg_comexp_lag3'
+                ,'vg_comexp_lag4'
+                ,'calendar_time'
+                ,'is_dec'
+                ,'is_aug')
+
+
+# We do not impute idnum; all other covariates are filled.
+vars_to_impute <- setdiff(all.covariates1, "idnum")
+
+new.filled.data <- filled.data %>%
+  arrange(idnum, shift_date) %>%
+  group_by(idnum) %>%
+  mutate(across(
+    all_of(vars_to_impute),
+    # Two-pass fill: forward LOCF, then backward LOCF to fill leading NAs.
+    ~ na.locf(na.locf(., na.rm = FALSE), fromLast = TRUE, na.rm = FALSE)
+  )) %>%
+  ungroup()
+
+```
+
+# Load helpers
+```{r}
+source("../helpers/RF_helpers.R")
+```
+
+
+
+# Hyperparameter tuning (optional):
+# Use OOB error from ranger to select (mtry, num.trees, min.node.size) on non-missing target rows.
+# The selected parameters are then used consistently in the simulation section below.
+# Note: we use the tuning results based on real data(not test data) to keep consistency, which does not influence debugging
+
+```{r}
+
+var <- 'vg_statebus'
+df <- new.filled.data
+
+# Formula
+formula_rf <- as.formula(paste(var, "~", paste(all.covariates1, collapse = "+")))
+
+# Only take rows with no NA targte variable
+df_nonmiss <- df[!is.na(df[[var]]), ]
+
+p <- length(all.covariates1)
+
+### -------------------------------------------
+### 2. params list
+### -------------------------------------------
+mtry_candidates  <- c(floor(sqrt(p)), floor(p/3),floor(p/2))
+ntree_candidates <- c(200, 350, 500)
+nodesize_candidates <- c(1, 3)
+
+param_grid <- expand.grid(
+  mtry = mtry_candidates,
+  ntree = ntree_candidates,
+  nodesize = nodesize_candidates
+)
+
+### -------------------------------------------
+### 3. OOB error
+### -------------------------------------------
+results <- data.frame(
+  mtry = integer(),
+  ntree = integer(),
+  nodesize = integer(),
+  OOB_error = numeric()
+)
+
+# Loop over parameter grid and record OOB classification error.
+for (i in 1:nrow(param_grid)) {
+
+  params <- param_grid[i, ]
+
+  cat("Running model", i, "/", nrow(param_grid),
+      ": mtry =", params$mtry,
+      ", ntree =", params$ntree,
+      ", nodesize =", params$nodesize, "\n")
+
+  rf_model <- ranger(
+    formula = formula_rf,
+    data = df_nonmiss,
+    num.trees = params$ntree,
+    mtry = params$mtry,
+    min.node.size = params$nodesize,
+    oob.error = TRUE,
+    importance = "none",
+    classification = TRUE
+  )
+
+  
+  oob_err <- rf_model$prediction.error
+
+  results <- rbind(results,
+                   data.frame(
+                     mtry = params$mtry,
+                     ntree = params$ntree,
+                     nodesize = params$nodesize,
+                     OOB_error = oob_err
+                   ))
+}
+
+### -------------------------------------------
+### 4. res
+### -------------------------------------------
+results1 <- results[order(results$OOB_error), ]
+print(results1)
+
+cat("\nBest parameters:\n")
+print(results1[1, ])
+
+```
+
+
+
+
+
+# -------------------------------------------------------------------
+# Simulation runs for different missing block lengths.
+# We keep sampling_rate = 0.1 and n_sim = 30 fixed, and vary block_length = 1..6.
+# Each run returns:
+#   - $all_runs: metrics per simulation run
+#   - $summary: average metrics across runs
+#   - $imputed_data_list: full imputed data per simulation (incl. prob)
+# -------------------------------------------------------------------
+
+
+```{r}
+
+# Defined Constants
+N_SIM <- 30
+SEED  <- 123
+SAMPLING_RATE <- 0.1
+BLOCK_LENGTHS <- 1:6
+
+
+
+for (k in BLOCK_LENGTHS) {
+  message(paste("\n>>> Starting Scenario: Block Length =", k, "<<<"))
+  
+  # 1. Run the simulation
+  current_result <- simulate_imputation_evaluation(
+    df = new.filled.data,             
+    var = "vg_statebus",              
+    id = "idnum",
+    time = "shift_date",
+    mask_fun = simulate_mask_row,
+    # Dynamic block_length for masking
+    mask_args = list(block_length = k, sampling_rate = SAMPLING_RATE),
+    impute_fun = impute_masked_rf_rolling,   
+    impute_args = list(
+      masked_var = "vg_statebus_masked",
+      mask_flag = "is_masked",
+      # Dynamic block_length for imputation logic
+      block_length = k, 
+      id_var = "idnum",
+      lag_list = c('vg_statebus_lag1',
+                   'vg_statebus_lag2',
+                   'vg_statebus_lag3',
+                   'vg_statebus_lag4'),
+      covariates = all.covariates1,
+      mtry = 3,
+      num.trees = 350,
+      min.node.size = 1
+    ),
+    n_sim = N_SIM,
+    seed = SEED
+  )
+  
+  # 2. Assign the result to a specific variable name
+  assign(paste0("sim_result_w_online_", k), current_result)
+  
+  # Intermediate save
+  if(!dir.exists("outputs/RF results")) dir.create("outputs/RF results", recursive = TRUE)
+  save(list = ls(pattern = "^sim_result_w_online_"), file = 'outputs/RF results/RF_BS_res_temp.RData')
+}
+
+
+```
+
+# Save Results
+```{r}
+if(!dir.exists("outputs/RF results")) dir.create("outputs/RF results", recursive = TRUE)
+
+result_objects <- ls(pattern = "^sim_result_w_online_")
+
+manual_objects <- c(
+  "new.filled.data",                 
+  "all.covariates1",                 
+  "impute_masked_rf_rolling",       
+  "simulate_mask_row",               
+  "simulate_imputation_evaluation",  
+  "N_SIM", "SEED", "SAMPLING_RATE", "BLOCK_LENGTHS" 
+)
+
+objects_to_save <- c(result_objects, manual_objects)
+
+save(list = objects_to_save, file = 'outputs/RF results/RF_BS_res.RData')
+
+```
+
+# Output files:
+# - rf_all_runs_result_w_online_k.csv: metrics for each simulation run (kappa, accuracy, rho.)
+# - rf_summary_w_online_k.csv: averaged metrics across runs
+# where k corresponds to block_length = 1..6.
+```{r}
+if(!dir.exists("outputs/RF results")) dir.create("outputs/RF results", recursive = TRUE)
+
+for (k in 1:6) {
+  var_name <- paste0("sim_result_w_online_", k)
+  res <- get(var_name)
+  
+  file_all_runs <- paste0("outputs/RF results/rf_all_runs_result_w_online_", k, ".csv")
+  file_summary  <- paste0("outputs/RF results/rf_summary_w_online_", k, ".csv")
+  
+  write.csv(res$all_runs, file_all_runs, row.names = TRUE)
+  write.csv(res$summary,  file_summary,  row.names = TRUE)
+  
+  message("Saved: ", file_summary)
+}
+```
+
+
+
+
+# Balance check on real data:
+# Compute the standard business situation balance over time:
+# Balance = (share_good - share_bad) / n_total
+```{r}
+var <- 'vg_statebus'
+df <- new.filled.data
+formula_rf <- as.formula(paste(var, "~", paste(all.covariates1, collapse = "+")))
+# only use non-NA rows
+rf_model <- ranger(
+  formula = formula_rf,
+  data = df[!is.na(df[[var]]), ],
+    mtry=3,
+    num.trees=350,
+    min.node.size=1
+)
+
+
+pred <- predict(rf_model, data = df)$predictions
+
+
+df <- df %>%
+  mutate(
+    vg_statebus_imputed = if_else(
+      is.na(.data[[var]]),
+      pred,                
+      .data[[var]]         
+    )
+  )
+
+df_summary <- df %>%
+  group_by(shift_date) %>%
+  summarise(
+    n_total = n(),
+    good_orignal = sum(vg_statebus == 1, na.rm = TRUE),
+    bad_orignal  = sum(vg_statebus == 3, na.rm = TRUE),
+    Balance_orignal = (good_orignal - bad_orignal) / n_total,
+    good_imputed = sum(vg_statebus_imputed == 1, na.rm = TRUE),
+    bad_imputed  = sum(vg_statebus_imputed == 3, na.rm = TRUE),
+    Balance_imputed = (good_imputed - bad_imputed) / n_total
+  )
+
+df_long <- df_summary %>%
+  select(shift_date, Balance_orignal, Balance_imputed) %>%
+  pivot_longer(cols = c(Balance_orignal, Balance_imputed),
+               names_to = "Type",
+               values_to = "Balance") %>%
+  mutate(
+    Type = dplyr::case_when(
+          Type == 'Balance_orignal' ~ 'Original Balance',
+          Type == 'Balance_imputed' ~ 'Imputed Balance',
+          TRUE ~ Type
+        ))
+
+
+rf_bs_balance_w_online <- ggplot(df_long, aes(x = shift_date, y = Balance, color = Type)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(
+    #title = "Comparison of BS Balance over Time",
+    x = "Time",
+    y = "BS Balance",
+    color = "Data Type"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.position = "top"
+  )
+
+if(!dir.exists("outputs/RF results")) dir.create("outputs/RF results", recursive = TRUE)
+ggsave("outputs/RF results/rf_bs_balance.pdf", plot = rf_bs_balance_w_online, width = 10, height = 6, units = 'in')
+
+```
+
+

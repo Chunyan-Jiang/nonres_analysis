@@ -1,0 +1,44 @@
+---
+title: "Quantitive Analysis: Nominal G and Effective G"
+output: pdf_document
+date: "2026-01-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+```{r}
+unit_nonresponse_data <- read_dta("../Dataset/unit_nonresponse_data.dta")
+```
+
+```{r}
+# Calculate the number of observations for each cluster
+cluster_counts <- unit_nonresponse_data %>%
+  group_by(idnum) %>%
+  tally(name = "n_g") %>%
+  arrange(desc(n_g)) %>%
+  mutate(
+    cum_share = cumsum(n_g) / sum(n_g), 
+    rank = row_number()
+  )
+
+# Calculate Nominal G and Effective G
+G_nominal <- nrow(cluster_counts)
+G_effective <- (sum(cluster_counts$n_g)^2) / sum(cluster_counts$n_g^2)
+
+G_nominal
+G_effective
+
+sink('outputs/G_effective.txt')
+print(paste("Nominal G:", G_nominal))
+print(paste("Effective G:", round(G_effective, 2)))
+sink()
+```
+

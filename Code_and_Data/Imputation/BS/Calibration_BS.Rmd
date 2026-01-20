@@ -1,0 +1,166 @@
+# -------------------------------------------------------------------
+# Purpose:
+#   Generate calibration plots for RF imputation probabilities.
+#   Calibration is evaluated using the predicted class probabilities stored in the RF simulation outputs.
+#
+# Workflow:
+#   1) Load RF simulation results (.RData) that contain imputed_data_list with prob columns
+#   2) Define a calibration plotting function:
+#        - extract masked rows
+#        - expand probability list-column into class probability columns
+#        - bin predicted probabilities and compute observed frequencies
+#   3) Loop over block_length = 1..6 and save calibration plots as PDF
+#
+# Key settings:
+#   - n_bins = 10 (number of probability bins between 0 and 1)
+#   - block_length scenarios: 1..6 (loaded objects: sim_result_w_online_1..6)
+#
+# Outputs:
+#   outputs/Calibration Graphs/ (calibration_result_w_online_k.pdf)
+# -------------------------------------------------------------------
+
+
+# Set the working directory to the current file's location.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+# Load Packages:
+# - Data wrangling: dplyr, tidyr, purrr
+# - Plotting: ggplot2
+```{r}
+  library(dplyr)
+  library(tidyr)
+  library(ggplot2)
+  library(purrr)
+```
+
+# Input:
+# Load RF simulation results saved from the RF imputation script.
+# The .RData file is expected to contain objects named:
+#   sim_result_w_online_1 ... sim_result_w_online_6
+# where each object is a list returned by simulate_imputation_evaluation(), including:
+#   - $imputed_data_list: list of data frames for each simulation run
+# Each data frame must include:
+#   - is_masked: indicator of artificially masked rows
+#   - prob: list-column of predicted class probabilities (from ranger probability=TRUE)
+```{r}
+load("outputs/RF results/RF_BS_res.RData")
+```
+
+# Calibration Func
+```{r}
+plot_calibration_rf <- function(
+    sim_result,
+    var,
+    n_bins = 10
+    #title = "Calibration of Imputation Probabilities"
+) {
+  # Plot calibration curve for RF imputation probabilities.
+  # Inputs:
+  #   - sim_result: one simulation scenario output containing $imputed_data_list with probability predictions.
+  #   - var: name of the true target variable column (character)
+  #   - n_bins: number of bins for predicted probabilities in [0, 1]
+  # Output:
+  #   - ggplot object showing calibration curves for each class.
+  #
+  # Interpretation:
+  #   For each class, points close to the diagonal y=x indicate well-calibrated probabilities.
+
+  # 1. Combine all simulation results
+  df_all <- sim_result$imputed_data_list %>%
+    bind_rows()
+  
+  # 2. Keep only imputed rows
+  df_masked <- df_all %>%
+    filter(is_masked) %>%
+    filter(!map_lgl(prob, is.null)) %>%
+    filter(!is.na(.data[[var]]))
+  
+  # 3. Expand probability list column
+  # Convert the list-column of probabilities into separate columns (one column per class).
+  df_wide <- df_masked %>%
+    unnest_wider(prob)
+  
+  # 4. Identify probability columns
+  all_cols <- colnames(df_wide)
+  prob_cols <- setdiff(all_cols, colnames(df_all))
+  
+  # 5. Wide to long
+  # For each row and each class, is_true indicates whether this class is the ground-truth label.
+  df_long <- df_wide %>%
+    pivot_longer(
+      cols = all_of(prob_cols),
+      names_to = "class",
+      values_to = "pred_prob"
+    ) %>%
+    mutate(
+      true_class = as.character(.data[[var]]),
+      is_true = (true_class == class)
+    )
+  
+  # 6. Binning
+  breaks <- seq(0, 1, length.out = n_bins + 1)
+  
+  calib_df <- df_long %>%
+    mutate(
+      prob_bin = cut(pred_prob,
+                     breaks = breaks,
+                     include.lowest = TRUE,
+                     right = TRUE),
+       class = dplyr::case_when(
+          class == '1' ~ 'Good',
+          class == '2' ~ 'Satisfactory',
+          class == '3' ~ 'Bad',
+          TRUE ~ class
+        ),
+        class = factor(class, levels = c('Good', 'Satisfactory', 'Bad'))
+    ) %>%
+    group_by(class, prob_bin) %>%
+    summarise(
+      mean_pred = mean(pred_prob, na.rm = TRUE),
+      mean_true = mean(is_true, na.rm = TRUE),
+      n = n(),
+      .groups = "drop"
+    ) %>%
+    filter(!is.na(mean_pred))
+  
+  # 7. Plot calibration for all classes
+  plt <- ggplot(calib_df, aes(x = mean_pred, y = mean_true, color = class)) +
+    geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+    geom_point(size = 2) +
+    geom_line(size = 1) +
+    coord_fixed(xlim = c(0,1), ylim = c(0,1)) +
+    labs(
+      #title = title,
+      x = "Imputed probability (binned mean)",
+      y = "Observed class frequency"
+    ) +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "top")
+  
+  return(plt)
+}
+```
+
+# draw pic
+```{r}
+if(!dir.exists("outputs/Calibration Graphs")) dir.create("outputs/Calibration Graphs", recursive = TRUE)
+for (k in 1:6) {
+  input_var_name  <- paste0("sim_result_w_online_", k)
+  output_var_name <- paste0("calibration_result_w_online_", k)
+  output_filename <- paste0("outputs/Calibration Graphs/calibration_result_w_online_", k, ".pdf")
+  sim_res <- get(input_var_name)
+  p <- plot_calibration_rf(sim_res, 'vg_statebus')
+  assign(output_var_name, p)
+  ggsave(output_filename, plot = p, width = 10, height = 6, units = 'in')
+  message("Saved BS Calibration Graph: ", output_filename)
+}
+```

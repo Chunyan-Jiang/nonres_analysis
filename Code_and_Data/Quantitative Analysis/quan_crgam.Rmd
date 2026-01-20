@@ -1,0 +1,309 @@
+---
+title: "Quantitive Analysis: Cluster Robust GAM"
+output: pdf_document
+date: "2026-01-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+# Load Packages
+```{r}
+library(mgcv)
+library(sandwich)  
+library(lmtest)    
+library(dplyr)
+library(haven)
+library(Matrix)
+library(car)
+library(rms)
+```
+
+# Load Dataset
+```{r}
+unit_nonresponse_data <- read_dta("../Dataset/unit_nonresponse_data.dta")
+```
+
+# Preparation
+```{r}
+# Sector names
+sector_names <- tibble(
+  sector_total = c(6,7,8,9,10,11,12,13,14,15,16,17,18,19,22,23,24),
+  sector_name = c(
+    "Food, Drinks & Tobacco",
+    "Textile, Clothing, Leather",
+    "Wood & Cork Products",
+    "Paper & Board Industry",
+    "Publishing & Printing",
+    "Cokery & Oil Processing",
+    "Chemical Industry",
+    "Pharmaceutical Industry",
+    "Rubber & Plastics",
+    "Glass, Ceramics & Stone Processing",
+    "Metal Industry",
+    "Electronics & Optical Products",
+    "Electric Equipment",
+    "Machinery Construction",
+    "Vehicles & Parts",
+    "Furniture, Jewellery, Toys & Others",
+    "Other Production"
+  )
+)
+
+# State names
+state_names <- tibble(
+  fedstaifo = 1:16,
+  state_name = c(
+    "Berlin West",
+    "Schleswig-Holstein",
+    "Hamburg",
+    "Bremen",
+    "Niedersachsen",
+    "Nordrhein-Westfalen",
+    "Rheinland-Pfalz",
+    "Hessen",
+    "Baden-Wuerttemberg",
+    "Bayern",
+    "Saarland",
+    "Mecklenburg-Vorpommern",
+    "Brandenburg",
+    "Sachsen-Anhalt",
+    "Sachsen",
+    "Thueringen"
+  )
+)
+
+unit_nonresponse_data_factor <- unit_nonresponse_data %>%
+  mutate(
+
+    # outcome (binary)
+    unit_nonres = factor(
+      unit_nonres,
+      levels = c(0, 1),
+      labels = c("Response", "Non-response")
+    ),
+
+    # cluster id (only for clustering)
+    idnum = factor(idnum),
+
+    # East / West
+    vg_westeast = factor(
+      vg_westeast,
+      levels = c(1, 2),
+      labels = c("Western", "Eastern")
+    ),
+
+    # month (Jan–Dec)
+    month = factor(
+      month,
+      levels = 1:12,
+      labels = c(
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+      )
+    )
+  )
+
+# Sector
+unit_nonresponse_data_factor <- unit_nonresponse_data_factor %>%
+  left_join(sector_names, by = "sector_total") %>%
+  mutate(
+    sector_total = factor(
+      sector_total,
+      levels = sector_names$sector_total,
+      labels = sector_names$sector_name
+    )
+  ) %>%
+  select(-sector_name)
+
+# State
+unit_nonresponse_data_factor <- unit_nonresponse_data_factor %>%
+  left_join(state_names, by = "fedstaifo") %>%
+  mutate(
+    fedstaifo = factor(
+      fedstaifo,
+      levels = state_names$fedstaifo,
+      labels = state_names$state_name
+    )
+  ) %>%
+  select(-state_name)
+
+```
+
+
+```{r}
+vars_used <- c(
+"idnum",
+"unit_nonres",
+"vg_westeast",
+"fedstaifo",
+"sector_total",
+ 'month',
+"calendar_time_shift",
+"particip_num",
+"particip_length",
+"vg_statebus_past6m",
+"vg_comexp_past6m"
+)
+
+df <- unit_nonresponse_data_factor[, vars_used]
+
+# Remove rows with missing values
+
+df <- na.omit(df)
+
+# Drop unused factor levels
+
+df <- droplevels(df)
+
+```
+
+# ParaPen specification for parametric (factor) terms in GAM (Model with State)
+```{r}
+parapen_fedstaifo <- list(
+  fedstaifo = list(diag(nlevels(df$fedstaifo)-1)),
+  sector_total = list(diag(nlevels(df$sector_total)-1)),
+  month = list(diag(nlevels(df$month)-1)))
+```
+
+# ParaPen specification for parametric (factor) terms in GAM (Model with Eastwest) (optional)
+```{r}
+parapen_westeast <- list(
+  vg_westeast = list(diag(nlevels(df$vg_westeast)-1)),
+  sector_total = list(diag(nlevels(df$sector_total)-1)),
+  month = list(diag(nlevels(df$month)-1)))
+
+```
+
+# Formula (Model with State)
+```{r}
+# Formula with State (avg BS and avg BE: k= 8, 12, 20)
+formula_fedstaifo1  <- unit_nonres ~ fedstaifo + sector_total + month +
+  s(calendar_time_shift, bs = "ps", k = 50) +
+  s(particip_num, bs = "ps", k = 50) +
+  s(particip_length, bs = "ps", k = 50) +
+  s(vg_statebus_past6m, bs = "ps", k = 8) +
+  s(vg_comexp_past6m, bs = "ps", k = 8)
+
+formula_fedstaifo2 <- unit_nonres ~ fedstaifo + sector_total + month +
+  s(calendar_time_shift, bs = "ps", k = 50) +
+  s(particip_num, bs = "ps", k = 50) +
+  s(particip_length, bs = "ps", k = 50) +
+  s(vg_statebus_past6m, bs = "ps", k = 12) +
+  s(vg_comexp_past6m, bs = "ps", k = 12)
+
+formula_fedstaifo3 <- unit_nonres ~ fedstaifo + sector_total + month +
+  s(calendar_time_shift, bs = "ps", k = 50) +
+  s(particip_num, bs = "ps", k = 50) +
+  s(particip_length, bs = "ps", k = 50) +
+  s(vg_statebus_past6m, bs = "ps", k = 20) +
+  s(vg_comexp_past6m, bs = "ps", k = 20)
+```
+
+# Formula (Model with Eastwest) (optional)
+```{r}
+# Formula with WestEast (avg BS and avg BE: k= 8, 12, 20)
+formula_westeast1  <- unit_nonres ~ vg_westeast + sector_total + month +
+  s(calendar_time_shift, bs = "ps", k = 50) +
+  s(particip_num, bs = "ps", k = 50) +
+  s(particip_length, bs = "ps", k = 50) +
+  s(vg_statebus_past6m, bs = "ps", k = 8) +
+  s(vg_comexp_past6m, bs = "ps", k = 8)
+
+formula_westeast2  <- unit_nonres ~ vg_westeast + sector_total + 
+  month +
+  s(calendar_time_shift, bs = "ps", k = 50) +
+  s(particip_num, bs = "ps", k = 50) +
+  s(particip_length, bs = "ps", k = 50) +
+  s(vg_statebus_past6m, bs = "ps", k = 12) +
+  s(vg_comexp_past6m, bs = "ps", k = 12)
+
+formula_westeast3  <- unit_nonres ~ vg_westeast + sector_total + month +
+  s(calendar_time_shift, bs = "ps", k = 50) +
+  s(particip_num, bs = "ps", k = 50) +
+  s(particip_length, bs = "ps", k = 50) +
+  s(vg_statebus_past6m, bs = "ps", k = 20) +
+  s(vg_comexp_past6m, bs = "ps", k = 20)
+```
+
+# Model (Model with State)
+```{r}
+# Model with State (avg BS and avg BE: k= 8, 12, 20)
+starttime_fedstaifo1 <- Sys.time()
+model_fedstaifo1 <- bam(
+formula_fedstaifo1,
+data = df,
+family = binomial(),
+method = "fREML",
+paraPen = parapen_fedstaifo,
+select = TRUE
+)
+save.image('outputs/quan_crgam.RData')
+
+starttime_fedstaifo2 <- Sys.time()
+model_fedstaifo2 <- bam(
+formula_fedstaifo2,
+data = df,
+family = binomial(),
+method = "fREML",
+paraPen = parapen_fedstaifo,
+select = TRUE
+)
+save.image('outputs/quan_crgam.RData')
+
+starttime_fedstaifo3 <- Sys.time()
+model_fedstaifo3 <- bam(
+formula_fedstaifo3,
+data = df,
+family = binomial(),
+method = "fREML",
+paraPen = parapen_fedstaifo,
+select = TRUE
+)
+save.image('outputs/quan_crgam.RData')
+```
+
+# Model (Model with Eastwest) (optional)
+```{r}
+# Model with WestEast (avg BS and avg BE: k= 8, 12, 20)
+starttime_westeast1 <- Sys.time()
+model_westeast1 <- bam(
+formula_westeast1,
+data = df,
+family = binomial(),
+method = "fREML",
+paraPen = parapen_westeast,
+select = TRUE
+)
+save.image('outputs/quan_crgam.RData')
+
+starttime_westeast2 <- Sys.time()
+model_westeast2 <- bam(
+formula_westeast2,
+data = df,
+family = binomial(),
+method = "fREML",
+paraPen = parapen_westeast,
+select = TRUE
+)
+save.image('outputs/quan_crgam.RData')
+
+starttime_westeast3 <- Sys.time()
+model_westeast3 <- bam(
+formula_westeast3,
+data = df,
+family = binomial(),
+method = "fREML",
+paraPen = parapen_westeast,
+select = TRUE
+)
+save.image('outputs/quan_crgam.RData')
+```
+

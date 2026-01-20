@@ -1,0 +1,82 @@
+
+Family: binomial 
+Link function: logit 
+
+Formula:
+unit_nonres ~ vg_westeast + sector_total + month + s(calendar_time_shift, 
+    bs = "ps", k = 50) + s(particip_num, bs = "ps", k = 50) + 
+    s(particip_length, bs = "ps", k = 50) + s(vg_statebus_past6m, 
+    bs = "ps", k = 12) + s(vg_comexp_past6m, bs = "ps", k = 12)
+
+Parametric coefficients:
+                                                Estimate Std. Error z value
+(Intercept)                                     -2.91928    0.06028 -48.429
+vg_westeastEastern                              -0.15447    0.04040  -3.823
+sector_totalTextile, Clothing, Leather          -0.55789    0.11160  -4.999
+sector_totalWood & Cork Products                -0.22718    0.08797  -2.582
+sector_totalPaper & Board Industry              -0.52861    0.11424  -4.627
+sector_totalPublishing & Printing                0.22575    0.07280   3.101
+sector_totalChemical Industry                   -0.34512    0.25988  -1.328
+sector_totalRubber & Plastics                    0.13359    0.08805   1.517
+sector_totalGlass, Ceramics & Stone Processing   0.24338    0.19207   1.267
+sector_totalMetal Industry                      -0.08287    0.07526  -1.101
+sector_totalElectronics & Optical Products      -0.03467    0.10364  -0.335
+sector_totalElectric Equipment                   0.18747    0.07322   2.560
+sector_totalMachinery Construction               0.07367    0.06560   1.123
+sector_totalVehicles & Parts                     0.33096    0.14379   2.302
+sector_totalFurniture, Jewellery, Toys & Others  0.28270    0.10120   2.793
+sector_totalOther Production                     0.31144    0.09896   3.147
+monthFeb                                        -0.06758    0.05849  -1.155
+monthMar                                        -0.01335    0.05802  -0.230
+monthApr                                        -0.09527    0.05891  -1.617
+monthMay                                         0.05621    0.05758   0.976
+monthJun                                         0.01315    0.05826   0.226
+monthJul                                        -0.15253    0.06035  -2.528
+monthAug                                         0.05587    0.05810   0.962
+monthSep                                         0.11678    0.05748   2.032
+monthOct                                         0.08453    0.05783   1.462
+monthNov                                         0.01690    0.05851   0.289
+monthDec                                         0.08068    0.05796   1.392
+                                                Pr(>|z|)    
+(Intercept)                                      < 2e-16 ***
+vg_westeastEastern                              0.000132 ***
+sector_totalTextile, Clothing, Leather          5.77e-07 ***
+sector_totalWood & Cork Products                0.009811 ** 
+sector_totalPaper & Board Industry              3.71e-06 ***
+sector_totalPublishing & Printing               0.001927 ** 
+sector_totalChemical Industry                   0.184187    
+sector_totalRubber & Plastics                   0.129244    
+sector_totalGlass, Ceramics & Stone Processing  0.205098    
+sector_totalMetal Industry                      0.270853    
+sector_totalElectronics & Optical Products      0.737959    
+sector_totalElectric Equipment                  0.010455 *  
+sector_totalMachinery Construction              0.261430    
+sector_totalVehicles & Parts                    0.021355 *  
+sector_totalFurniture, Jewellery, Toys & Others 0.005216 ** 
+sector_totalOther Production                    0.001650 ** 
+monthFeb                                        0.247915    
+monthMar                                        0.817974    
+monthApr                                        0.105842    
+monthMay                                        0.328911    
+monthJun                                        0.821413    
+monthJul                                        0.011485 *  
+monthAug                                        0.336216    
+monthSep                                        0.042188 *  
+monthOct                                        0.143823    
+monthNov                                        0.772764    
+monthDec                                        0.163912    
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Approximate significance of smooth terms:
+                          edf Ref.df    Chi.sq  p-value    
+s(calendar_time_shift) 15.094     49     134.9  < 2e-16 ***
+s(particip_num)        22.097     49 3772833.6  < 2e-16 ***
+s(particip_length)     13.941     49 1012939.3  < 2e-16 ***
+s(vg_statebus_past6m)   5.983     11    6830.5  < 2e-16 ***
+s(vg_comexp_past6m)     4.025     11     224.4 0.000646 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+R-sq.(adj) =  0.136   Deviance explained = 18.7%
+fREML =  66444  Scale est. = 1         n = 48648

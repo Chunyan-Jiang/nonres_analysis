@@ -1,0 +1,210 @@
+# -------------------------------------------------------------------
+# Purpose:
+#   LOCF imputation for BS + simulation-based evaluation.
+#
+# Workflow:
+#   1) Load and prepare data
+#   2) Load helper functions (masking, imputation, evaluation)
+#   3) Run simulations for block_length = 1..6 (n_sim = 30, fixed seed)
+#   4) Save results (RData + CSV summaries) and generate balance plot
+#
+# Key settings (used in the simulation section below):
+#   - sampling_rate = 0.1
+#   - block_length  = 1..6
+#   - n_sim         = 30
+#   - seed          = 123 (seed + s per simulation run)
+#
+# Outputs:
+#   outputs/LOCF results/ (CSV files + RData + balance plot PDF)
+# -------------------------------------------------------------------
+
+
+
+# Set the working directory to the current file's location.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+# Load Packages
+# Data wrangling: dplyr, tidyr, purrr, rlang
+# I/O: haven
+# Imputation helpers: zoo
+# Evaluation metrics: psych, Metrics
+# Plotting: ggplot2
+
+```{r}
+library(haven)
+library(tidyr)
+library(purrr)
+library(Metrics)
+library(zoo)
+library(rlang)
+library(psych)
+library(dplyr)
+library(ggplot2)
+```
+# Load Dataset
+# We use the prepared panel dataset for imputation evaluation.
+# Note: simulation repeats n_sim times; runtime can be substantial on the full sample of read data
+
+```{r}
+filled.data <- read_dta("../../Dataset/imputation_data.dta")
+```
+
+
+# Convert labelled survey responses to numeric to enable LOCF via zoo::na.locf
+
+```{r}
+filled.data <- filled.data %>%
+  mutate(
+    vg_statebus = as.numeric(vg_statebus),
+    vg_comexp = as.numeric(vg_comexp )
+  )
+```
+
+# Load helpers
+```{r}
+source("../helpers/LOCF_helpers.R")
+```
+
+# Simulation
+# -------------------------------------------------------------------
+# Simulation runs for different missing block lengths.
+# We keep sampling_rate = 0.1 and n_sim = 30 fixed, and vary block_length = 1..6.
+# Results are stored as a list with:
+#   - $all_runs: metrics per simulation run
+#   - $summary: average metrics across runs
+# -------------------------------------------------------------------
+```{r}
+# Defined Constants
+N_SIM <- 30 # numder of simulation
+SEED  <- 123 # random seed
+SAMPLING_RATE <- 0.1 # sampling rate
+BLOCK_LENGTHS <- 1:6 # block lengths
+
+for (k in BLOCK_LENGTHS) {
+  message(paste("\n>>> Starting Scenario: Block Length =", k, "<<<"))
+  
+  # 1. Run the simulation
+  current_result <- simulate_imputation_evaluation(
+    df = filled.data,             
+    var = "vg_statebus",              
+    id = "idnum",
+    time = "shift_date",
+    mask_fun = simulate_mask_row,
+    mask_args = list(block_length = k, sampling_rate = SAMPLING_RATE),
+    impute_fun = impute_masked_basic,    
+    impute_args = list(masked_var = "vg_statebus_masked", 
+                       mask_flag = "is_masked", 
+                       method = 'locf'),
+    n_sim = N_SIM,
+    seed = SEED
+  )
+  
+  # 2. Assign the result to a specific variable name
+  assign(paste0("sim_locf_result_", k), current_result)
+}
+```
+
+# Save Results
+```{r}
+result_objects <- ls(pattern = "^sim_locf_result_")
+
+manual_objects <- c(
+  "filled.data",                     
+  "impute_masked_basic",             
+  "simulate_imputation_evaluation",  
+  "simulate_mask_row",               
+  "N_SIM", "SEED", "SAMPLING_RATE", "BLOCK_LENGTHS"
+)
+
+objects_to_save <- c(result_objects, manual_objects)
+
+save(list = objects_to_save, file = 'outputs/LOCF results/LOCF_BS_res.Rdata')
+```
+
+# Output files:
+# - locf_all_runs_result_k.csv: metrics for each simulation run (kappa, accuracy, rho.)
+# - locf_summary_k.csv: averaged metrics across runs
+# where k corresponds to block_length = 1..6.
+```{r}
+for (k in 1:6) {
+  var_name <- paste0("sim_locf_result_", k)
+  res <- get(var_name)
+  file_all_runs <- paste0("outputs/LOCF results/locf_all_runs_result_", k, ".csv")
+  file_summary  <- paste0("outputs/LOCF results/locf_summary_", k, ".csv")
+  write.csv(res$all_runs, file_all_runs, row.names = TRUE)
+  write.csv(res$summary,  file_summary,  row.names = TRUE)
+  message("Saved: ", file_summary)
+}
+```
+
+# Balance check on real data:
+# Compute the standard business situation balance over time:
+# Balance = (share_good - share_bad) / n_total
+```{r}
+
+df <- filled.data%>%select(idnum,shift_date,vg_statebus)
+
+df.imputed <- df%>%
+  arrange(idnum, shift_date) %>%
+  group_by(idnum) %>%
+  mutate(vg_statebus_imputed = na.locf(vg_statebus, na.rm = FALSE)) %>%
+  ungroup()
+df_summary <- df.imputed %>%
+  group_by(shift_date) %>%
+  summarise(
+    n_total = n(),
+    good_orignal = sum(vg_statebus == 1, na.rm = TRUE),
+    bad_orignal  = sum(vg_statebus == 3, na.rm = TRUE),
+    Balance_orignal = (good_orignal - bad_orignal) / n_total,
+    good_imputed = sum(vg_statebus_imputed == 1, na.rm = TRUE),
+    bad_imputed  = sum(vg_statebus_imputed == 3, na.rm = TRUE),
+    Balance_imputed = (good_imputed - bad_imputed) / n_total
+  )
+
+
+df_long <- df_summary %>%
+  select(shift_date, Balance_orignal, Balance_imputed) %>%
+  pivot_longer(cols = c(Balance_orignal, Balance_imputed),
+               names_to = "Type",
+               values_to = "Balance") %>%
+  mutate(
+    Type = dplyr::case_when(
+          Type == 'Balance_orignal' ~ 'Original Balance',
+          Type == 'Balance_imputed' ~ 'Imputed Balance',
+          TRUE ~ Type
+        ))
+
+
+locf_bs_balance <- ggplot(df_long, aes(x = shift_date, y = Balance, color = Type)) +
+  geom_line(size = 1) +
+  geom_point(size = 2) +
+  labs(
+    #title = "Comparison of BS Balance over Time",
+    x = "Time",
+    y = "BS Balance",
+    color = "Data Type"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    legend.position = "top"
+  )
+
+if(!dir.exists("outputs/LOCF results")) dir.create("outputs/LOCF results", recursive = TRUE)
+ggsave("outputs/LOCF results/locf_bs_balance.pdf", plot = locf_bs_balance, width = 10, height = 6, units = 'in')
+```
+
+
+
+
+
+

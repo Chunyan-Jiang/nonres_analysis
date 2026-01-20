@@ -1,0 +1,177 @@
+# -------------------------------------------------------------------
+# Purpose:
+#   Summarize and compare BS imputation performance across methods (LOCF, MC1, RF).
+#
+# Workflow:
+#   1) Read simulation outputs (all_runs CSV) produced by the BS imputation scripts for block_length k = 1..6.
+#   2) Generate boxplots of Cohen’s Kappa, Accuracy, Spearman’s rho comparing distributions across k and method.
+#   3) Save plots to outputs/Metrics Comparision Results/.
+#
+# Key inputs (expected to exist before running this script):
+#   - outputs/LOCF results/locf_all_runs_result_k.csv
+#   - outputs/MC results/mc1_all_runs_result_k.csv
+#   - outputs/RF results/rf_all_runs_result_w_online_k.csv
+#   for k = 1..6.
+#
+# Outputs:
+#   - outputs/Metrics Comparision Results/bs_kappa_w_online.pdf
+#   - outputs/Metrics Comparision Results/bs_accuracy_w_online.pdf
+#   - outputs/Metrics Comparision Results/bs_rho_w_online.pdf
+# -------------------------------------------------------------------
+
+
+# Set the working directory to the current file's location.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+if (interactive() && requireNamespace("rstudioapi", quietly = TRUE)) {
+  current_path <- dirname(rstudioapi::getSourceEditorContext()$path)
+  setwd(current_path)
+  message("Working directory successfully set to: ", current_path)
+}
+```
+
+# Load Packages
+```{r}
+library(readr)
+library(tidyverse)
+```
+
+```{r}
+read_and_process_locf <- function(k_value) {
+  file_path <- paste0("outputs/LOCF results/locf_all_runs_result_", k_value, ".csv")
+  
+  read_csv(file_path, show_col_types = FALSE) %>%
+    rename(kappa = mean_kappa, accuracy = mean_accuracy, rho = mean_rho) %>%
+    mutate(question = "bs", method = "LOCF", k = k_value) %>%
+    select(question, method, k, kappa, accuracy, rho)
+}
+
+k_values <- 1:6
+bs_locf_combined <- map_dfr(k_values, read_and_process_locf)
+```
+
+
+```{r}
+
+read_and_process_mc <- function(k_value) {
+  file_path <- paste0("outputs/MC results/mc1_all_runs_result_", k_value, ".csv")
+  
+  read_csv(file_path, show_col_types = FALSE) %>%
+    rename(kappa = mean_kappa, accuracy = mean_accuracy, rho = mean_rho) %>%
+    mutate(question = "bs", method = "MC (1)", k = k_value) %>%
+    select(question, method, k, kappa, accuracy, rho)
+}
+
+k_range <- 1:6
+
+bs_mc_combined <- map_dfr(k_range, read_and_process_mc)
+
+```
+
+```{r}
+read_and_process_rf <- function(k_value) {
+  file_path <- paste0("outputs/RF results/rf_all_runs_result_w_online_", k_value, ".csv")
+  
+  read_csv(file_path, show_col_types = FALSE) %>%
+    rename(kappa = mean_kappa, accuracy = mean_accuracy, rho = mean_rho) %>%
+    mutate(question = "bs", method = "RF", k = k_value) %>%
+    select(question, method, k, kappa, accuracy, rho)
+}
+
+bs_rf_combined <- map_dfr(1:6, read_and_process_rf)
+```
+
+# Combine All Results
+```{r}
+bs_combined <- bind_rows(bs_locf_combined, bs_mc_combined, bs_rf_combined)
+```
+
+
+```{r}
+# Set method order (only rf, mc1, locf)
+method_order <- c("RF", "MC (1)", "LOCF")
+bs_combined$method <- factor(bs_combined$method, levels = method_order)
+
+
+# Figure 1: Kappa - unified x-axis
+p1 <- ggplot(bs_combined, aes(x = kappa, y = factor(k), fill = method)) +
+  geom_boxplot(outlier.size = 0.8, alpha = 0.8) +
+  labs(
+    x = "Cohen’s Kappa",
+    y = "Length of consecutive missing months",
+    fill = "Method"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),   
+    axis.title.y = element_text(size = 12, face = "bold"),   
+    axis.text.x  = element_text(size = 10, angle = 0, hjust = 0.5), 
+    axis.text.y  = element_text(size = 10),                  
+    legend.title = element_text(size = 12, face = "bold"),   
+    legend.text  = element_text(size = 10),                  
+    legend.position = "right"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_continuous(breaks = seq(0, 1, by = 0.02)) 
+
+if(!dir.exists("outputs/Metrics Comparision Results")) dir.create("outputs/Metrics Comparision Results", recursive = TRUE)
+ggsave("outputs/Metrics Comparision Results/bs_kappa_w_online.pdf", plot = p1,width = 10, height = 6, units = "in")
+
+# Figure 2: Accuracy - unified x-axis
+p2 <- ggplot(bs_combined, aes(x = accuracy, y = factor(k), fill = method)) +
+  geom_boxplot(outlier.size = 0.8, alpha = 0.8) +
+  labs(
+    x = "Accuracy",
+    y = "Length of consecutive missing months",
+    fill = "Method"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),   
+    axis.title.y = element_text(size = 12, face = "bold"),   
+    axis.text.x  = element_text(size = 10, angle = 0, hjust = 0.5), 
+    axis.text.y  = element_text(size = 10),                  
+    legend.title = element_text(size = 12, face = "bold"),   
+    legend.text  = element_text(size = 10),                  
+    legend.position = "right"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_continuous(breaks = seq(0, 1, by = 0.02))
+
+if(!dir.exists("outputs/Metrics Comparision Results")) dir.create("outputs/Metrics Comparision Results", recursive = TRUE)
+ggsave("outputs/Metrics Comparision Results/bs_accuracy_w_online.pdf", plot = p2,width = 10, height = 6, units = "in")
+
+# Figure 3: Rho - unified x-axis
+p3 <- ggplot(bs_combined, aes(x = rho, y = factor(k), fill = method)) +
+  geom_boxplot(outlier.size = 0.8, alpha = 0.8) +
+  labs(
+    x = "Spearman’s rho",
+    y = "Length of consecutive missing months",
+    fill = "Method"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.title.x = element_text(size = 12, face = "bold"),   
+    axis.title.y = element_text(size = 12, face = "bold"),   
+    axis.text.x  = element_text(size = 10, angle = 0, hjust = 0.5), 
+    axis.text.y  = element_text(size = 10),                  
+    legend.title = element_text(size = 12, face = "bold"),   
+    legend.text  = element_text(size = 10),                  
+    legend.position = "right"
+  ) +
+  scale_fill_brewer(palette = "Set2") +
+  scale_x_continuous(breaks = seq(0, 1, by = 0.02))
+
+if(!dir.exists("outputs/Metrics Comparision Results")) dir.create("outputs/Metrics Comparision Results", recursive = TRUE)
+ggsave("outputs/Metrics Comparision Results/bs_rho_w_online.pdf", plot = p3,width = 10, height = 6, units = "in")
+# Display plots
+print(p1)
+print(p2)
+print(p3)
+
+```
