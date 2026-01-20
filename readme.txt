@@ -2,7 +2,7 @@ PROJECT ELECTRONIC APPENDIX
 ===========================
 
 This repository contains the electronic appendix for the project.
-It provides the program code, test data, and outputs generated from the test data.
+It provides the program code, test data, and outputs generated from the test data. 
 
 1. Repository Structure
 -----------------------
