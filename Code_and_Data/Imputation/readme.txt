@@ -26,7 +26,6 @@ This folder contains the imputation workflows used in the simulation study.
 
 ## Notes
 
-Each script in `BS/` and `BE/` is designed to be runnable independently.
 A common random seed is used to ensure reproducibility and comparability
 across imputation methods.
 Outputs are written to subfolders within the corresponding outcome directory.
